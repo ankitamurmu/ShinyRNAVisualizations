@@ -2,27 +2,52 @@
 library(shiny)
 library(dplyr)
 library(plotly)
+library(shinythemes)
 
 
 ui <- fluidPage(
   # main tab: title of the whole page
   titlePanel("RNA Analysis"),
+  
+  # test out multiple themes
+  shinythemes::themeSelector(),
+  
   # accept a file:
   fileInput("inputData", "Enter your .csv file:"),
+  # make tabs, which shiny function do we need?
+  
+  
   
   ##### tab 1: Gene Expression Across Factors #####
-  # make a tab, which shiny function do we need?
-  tabPanel("Gene Expression"),
-  # drop-down list to type in gene of interest to plot
-  # gene input, change 'choices' to a vector of all rownames of the data matrix
-  selectInput("userGene", "Choose a gene to plot:", choices = c(1,2,3)),
-  
-  # input factors
-  
-  # input Graph type: Boxplot/Violin
-  
-  # input scale: linear/log
-  
+  sidebarLayout(
+    # sidebarPanel should have all the input needed from the user
+    sidebarPanel(
+      tabPanel("Gene Expression"),
+      
+      # drop-down list to type in gene of interest to plot
+      # gene input, change 'choices' to a vector of all rownames of the data matrix
+      selectInput("userGene", "Choose a gene to plot:", choices = c(1,2,3))
+      
+      # input factors
+      
+      # input Graph type: Boxplot/Violin
+      
+      # input scale: linear/log
+    ),  # end of 'sidebarPanel()'
+    
+    # mainbarPanel should have the plot, possibly tabs also?
+    mainbarPanel(
+      tabsetPanel(
+        tabPanel(paste0("Across OBTAIN FACTOR 1 FROM DATA/USER")
+                 # the ggplot should be here
+        ),
+        tabPanel(paste0("Across OBTAIN FACTOR 2 FROM DATA/USER")
+                 # the ggplot across factor 2 should be here
+        )
+      )
+    )
+    
+  ),  # end of 'sidebarLayout()'
   
   
   
