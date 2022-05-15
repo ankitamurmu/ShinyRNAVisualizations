@@ -10,16 +10,16 @@ ui <- fluidPage(
   # main tab: title of the whole page
   titlePanel("RNA Analysis"),
 
-  # test out multiple themes
+  # test out multiple themes, change this eventually to shinythemes::shinytheme('chosenTheme')
   shinythemes::themeSelector(),
   
   # accept a file:
-  fileInput("inputData", "Enter your .csv file:"),
-  # make tabs, which shiny function do we need?
+  fileInput("inputData", "Enter your .csv or .xlsx file:"),
+  # make page tabs, which shiny function do we need?
   
   
   
-  ####### Tab 1: Gene Expression #######
+  ################ UI Tab 1: Gene Expression ################
   sidebarLayout(
     # sidebarPanel should have all the input needed from the user
     sidebarPanel(
@@ -33,9 +33,11 @@ ui <- fluidPage(
       
       # input Graph type: Boxplot/Violin
       radioButtons("graphType", "Graph Type",
-                   c("Boxplot" = "boxplot", "Violin" = "violin"))
-      
+                   c("Boxplot" = "boxplot", "Violin" = "violin")),
       # input scale: linear/log
+      radioButtons("scaleType", "Graph Scale",
+                   c("Linear" = "linear", "Log" = "log"))
+      
     ),  # end of 'sidebarPanel()'
     
     # mainbarPanel should have the plots
@@ -56,12 +58,14 @@ ui <- fluidPage(
   
   
   
-  ####### Tab 2: Gene Trajectories #######
+  ################ UI Tab 2: Gene Trajectories ################
   sidebarLayout(
     sidebarPanel(
       # user input list of genes to plot
       textAreaInput("Area", "Enter a list of genes seperated by new lines, commas, or spaces:",
-                    value = "Fndc5, Pgc1a\nBdnf, Itgb5")
+                    value = "Fndc5, Pgc1a\nBdnf, Itgb5"),
+      # add a description under the input area
+      h4("Paste genes of interest")
     ),
     
     # should contain graphs and DT table
@@ -78,15 +82,24 @@ ui <- fluidPage(
   
 )
 
+##################################################################################################################
 ##################################################### SERVER #####################################################
+##################################################################################################################
 server <- function(input, output, session) {
-  ####### Tab 1 #######
+  ################# Server Tab 1 #################
   
-  ####### Tab 2 #######
-  # render plot
+  
+  
+  
+  
+  ################# Server Tab 2 #################
+  ## render plots
+  output$trajPlot <- renderPlot({
+    ggplot()
+  })
+  
 
-  
-  # render interactive DT table
+  ## render interactive DT table
 }
 
 
