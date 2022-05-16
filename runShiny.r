@@ -7,79 +7,94 @@ library(DT)
 
 
 ui <- fluidPage(
-  # main tab: title of the whole page
-  titlePanel("RNA Analysis"),
-
-  # test out multiple themes, change this eventually to shinythemes::shinytheme('chosenTheme')
-  shinythemes::themeSelector(),
+  # this sets the entire 'theme'/style
+  shinythemes::shinytheme("flatly"),
   
-  # accept a file:
-  fileInput("inputData", "Enter your .csv or .xlsx file:"),
-  # make page tabs, which shiny function do we need?
-  
-  
-  
-  ################ UI Tab 1: Gene Expression ################
-  sidebarLayout(
-    # sidebarPanel should have all the input needed from the user
-    sidebarPanel(
-      tabPanel("Gene Expression"),
-      
-      # drop-down list to type in gene of interest to plot
-      # gene input, change 'choices' to a vector of all rownames of the data matrix
-      selectInput("userGene", "Choose a gene to plot:", choices = c(1,2,3)),
-      
-      # input factors
-      
-      # input Graph type: Boxplot/Violin
-      radioButtons("graphType", "Graph Type",
-                   c("Boxplot" = "boxplot", "Violin" = "violin")),
-      # input scale: linear/log
-      radioButtons("scaleType", "Graph Scale",
-                   c("Linear" = "linear", "Log" = "log"))
-      
-    ),  # end of 'sidebarPanel()'
+  # name of the whole project
+  navbarPage("RNA Analysis",
     
-    # mainbarPanel should have the plots
-    mainPanel(
-      tabsetPanel(
-        tabPanel(paste0("Across OBTAIN FACTOR 1 FROM DATA/USER")
-                 # the ggplot should be here
-        ),
-        tabPanel(paste0("Across OBTAIN FACTOR 2 FROM DATA/USER")
-                 # the ggplot across factor 2 should be here
-        )
-      )
-    )
-    
-  ),  # end of 'sidebarLayout()'
-  
-  
-  
-  
-  
-  ################ UI Tab 2: Gene Trajectories ################
-  sidebarLayout(
-    sidebarPanel(
-      # user input list of genes to plot
-      textAreaInput("Area", "Enter a list of genes seperated by new lines, commas, or spaces:",
-                    value = "Fndc5, Pgc1a\nBdnf, Itgb5"),
-      # add a description under the input area
-      h4("Paste genes of interest")
+    # main tab: title of the whole page
+    tabPanel("Main",  # part of navbarPage
+             
+      titlePanel("Input Data"),
+      
+      # accept normalized data:
+      h5("Counts matrix: Rows = Gene names; Columns = Sample names"),
+      fileInput("inputData", "Enter your count-normalized .csv or .xlsx file:", width = '35%'),
+      
+      h5("Metadata: Rows = Sample names; Columns = Related factors (e.g: sex, organ, time...)"),
+      fileInput("inputMetadata", "Enter a metadata .csv or .xlsx file for the counts matrix:", width = '35%')
     ),
     
-    # should contain graphs and DT table
-    mainPanel(
-      tabsetPanel(
-        tabPanel("Trajectories Plot"),
+    
+    
+    ################ UI Tab 1: Gene Expression ################
+    tabPanel("Gene Changes",  # part of navbarPage
+             
+      sidebarLayout(
+        # sidebarPanel should have all the input needed from the user
+        sidebarPanel(
+          tabPanel("Gene Expression"),
+          
+          # drop-down list to type in gene of interest to plot
+          # gene input, change 'choices' to a vector of all rownames of the data matrix
+          selectInput("userGene", "Choose a gene to plot:", choices = c(1,2,3)),
+          
+          # input factors
+          
+          # input Graph type: Boxplot/Violin
+          radioButtons("graphType", "Graph Type",
+                       c("Boxplot" = "boxplot", "Violin" = "violin")),
+          # input scale: linear/log
+          radioButtons("scaleType", "Graph Scale",
+                       c("Linear" = "linear", "Log" = "log"))
+          
+        ),  # end of 'sidebarPanel()'
         
-        tabPanel("Query Info")
+        # mainbarPanel should have the plots
+        mainPanel(
+          tabsetPanel(
+            tabPanel(paste0("Across OBTAIN FACTOR 1 FROM DATA/USER")
+                     # the ggplot should be here
+            ),
+            tabPanel(paste0("Across OBTAIN FACTOR 2 FROM DATA/USER")
+                     # the ggplot across factor 2 should be here
+            ),
+            tabPanel("Raw Data Plotted")
+          )
+        )
+        
+      )  # end of 'sidebarLayout()'
+    ),
+    
+    
+    
+    
+    ################ UI Tab 2: Gene Trajectories ################
+    tabPanel("Trajectories",
+      
+      sidebarLayout(
+        sidebarPanel(
+          # user input list of genes to plot
+          textAreaInput("Area", "Enter a list of genes seperated by new lines, commas, or spaces:",
+                        value = "Fndc5, Pgc1a\nBdnf, Itgb5"),
+          # add a description under the input area
+          h4("Paste genes of interest")
+        ),
+        
+        # should contain graphs and DT table
+        mainPanel(
+          tabsetPanel(
+            tabPanel("Trajectories Plot"),
+            
+            tabPanel("Query Info")
+          )
+          
+        )
       )
       
     )
   )
-  
-  
 )
 
 ##################################################################################################################
@@ -103,9 +118,9 @@ server <- function(input, output, session) {
 }
 
 
-# this connects the two and runs the shiny app
-shinyApp(ui = ui, server = server, options = list(display.mode = "showcase"))
-# 'display.mode = showcase' presents code being run in the server, nice debugging tool..
+##### this connects the two and runs the shiny app #####
+shinyApp(ui = ui, server = server)
+# 'options = list(display.mode = "showcase")' presents code being run in the server, nice debugging tool..
 
 
 
