@@ -101,6 +101,9 @@ ui <- fluidPage(
 ##################################################### SERVER #####################################################
 ##################################################################################################################
 server <- function(input, output, session) {
+  # remove the default limit of 5MB user uploads to 200MB (sample data is 129MB)
+  options(shiny.maxRequestSize=200*1024^2)
+  
   ################# Server Tab 1 #################
   
   
