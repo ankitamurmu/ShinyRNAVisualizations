@@ -25,11 +25,9 @@ ui <- fluidPage(
       # accept metadata
       h5("Metadata: Rows = Sample names; Columns = Related factors (e.g: sex, organ, time...)"),
       fileInput("inputMetadata", "Enter a metadata .csv or .xlsx file for the counts matrix:", width = '35%'),
-      
+
       # present factors from metadata, and let the user choose factors from drop-down to check
-      # so maybe there are 10 factors and the user can check 4/10 that they want to use
-      # and then these 4 are options in the pages of plots
-      checkboxGroupInput("factorsChosen", "Choose all factors you")
+      uiOutput("metaFactors")
     ),
     
     
@@ -70,7 +68,7 @@ ui <- fluidPage(
           )
         )
         
-      )  # end of 'sidebarLayout()'
+      )
     ),
     
     
@@ -106,14 +104,31 @@ ui <- fluidPage(
 ##################################################################################################################
 ##################################################### SERVER #####################################################
 ##################################################################################################################
+
 server <- function(input, output, session) {
-  # remove the default limit of 5MB user uploads to 200MB (sample data is 129MB)
+  # change the default limit of 5MB user uploads to 200MB (sample data is 129MB)
   options(shiny.maxRequestSize=200*1024^2)
   
   ################# Input Tab #################
   
+  # this provides the user factors to chose
+  # 'renderUI' dynamically changes by user input (i.e metadata input)
+  output$metaFactors <- renderUI({
+    # await user input in the relevant fileInput
+    metadataFile <- input$inputMetadata
+    
+    # suppresses error, basically waits for input before it continues render function
+    req(metadataFile)
+    
+    # read the uniquely produced datapath, read the file, extract the colnames
+    factorNames <- colnames(read.csv(metadataFile$datapath))
+    
+    # to make an input that changes conditionally, it must be added here
+    checkboxGroupInput("factorsChosen", "Choose all factors you wish to analyze:",
+                       choices = factorNames)
+  })
   
-  
+
   ################# Server Tab 1 #################
   
   
