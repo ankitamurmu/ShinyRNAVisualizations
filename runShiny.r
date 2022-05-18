@@ -4,6 +4,7 @@ library(dplyr)
 library(plotly)
 library(shinythemes)
 library(DT)
+library(ggradar)
 
 
 ui <- fluidPage(
@@ -46,9 +47,10 @@ ui <- fluidPage(
           
           # input factors
           
-          # input Graph type: Boxplot/Violin
+          # input Graph type: Boxplot/Violin/Scatterplot/RadarCharts
           radioButtons("graphType", "Graph Type",
-                       c("Boxplot" = "boxplot", "Violin" = "violin")),
+                       c("Boxplot" = "boxplot", "Violin" = "violin", "Scatterplot" = "scatterplot",
+                        "Radar Chart" = "radar chart")),
           # input scale: linear/log
           radioButtons("scaleType", "Graph Scale",
                        c("Linear" = "linear", "Log" = "log"))
@@ -63,6 +65,9 @@ ui <- fluidPage(
             ),
             tabPanel(paste0("Across OBTAIN FACTOR 2 FROM DATA/USER")
                      # the ggplot across factor 2 should be here
+            ),
+            tabPanel(paste0("COMPARISON ACROSS FACTORS AND SAMPLES")
+                     # the radar chart plot should be here
             ),
             tabPanel("Raw Data Plotted")
           )
