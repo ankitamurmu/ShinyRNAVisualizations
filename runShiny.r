@@ -47,6 +47,8 @@ ui <- fluidPage(
           
           # input factors
           
+          
+          ## perhaps we should change this to 2 different pages: singular gene analysis (box/violin), multiple gene analysis (scatter/radar)..
           # input Graph type: Boxplot/Violin/Scatterplot/RadarCharts
           radioButtons("graphType", "Graph Type",
                        c("Boxplot" = "boxplot", "Violin" = "violin", "Scatterplot" = "scatterplot",
