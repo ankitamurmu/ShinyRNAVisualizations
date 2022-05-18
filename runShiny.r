@@ -45,6 +45,11 @@ ui <- fluidPage(
           # gene input, change 'choices' to a vector of all rownames of the data matrix
           selectInput("userGene", "Choose a gene to plot:", choices = c(1,2,3)),
           
+         # will this kind of side bar panel work? 
+          selectInput("userAnalysis", "Type of gene analysis:", choices = c(" " = " ",
+                          "Singular gene analysis" = "singular gene analysis", 
+                                "Multiple gene analysis" = "multiple gene analysis")),
+          
           # input factors
           
           # input Graph type: Boxplot/Violin/Scatterplot/RadarCharts
