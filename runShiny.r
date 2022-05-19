@@ -33,8 +33,8 @@ ui <- fluidPage(
              
              
              
-             ################ UI Tab 1: Gene Expression ################
-             tabPanel("Gene Changes",  # part of navbarPage
+             ################ UI Tab 1: Single Gene Analysis ################
+             tabPanel("Single Gene Analysis",  # part of navbarPage
                       
                       sidebarLayout(
                         # sidebarPanel should have all the input needed from the user
@@ -45,21 +45,19 @@ ui <- fluidPage(
                           # gene input, change 'choices' to a vector of all rownames of the data matrix
                           selectInput("userGene", "Choose a gene to plot:", choices = c(1,2,3)),
                           
-                          
-                          
                           # input factors
+                          #
                           
-                          
-                          ## perhaps we should change this to 2 different pages: singular gene analysis (box/violin), multiple gene analysis (scatter/radar)..
-                          # input Graph type: Boxplot/Violin/Scatterplot/RadarCharts
+                          # input Graph type: Boxplot/Violin
                           radioButtons("graphType", "Graph Type",
-                                       c("Boxplot" = "boxplot", "Violin" = "violin", "Scatterplot" = "scatterplot",
-                                         "Radar Chart" = "radar chart")),
-                          # input scale: linear/log
-                          radioButtons("scaleType", "Graph Scale",
-                                       c("Linear" = "linear", "Log" = "log"))
-                          
-                        ),  # end of 'sidebarPanel()'
+                                       c("Boxplot" = "boxplot", "Violin" = "violin"),
+                                       
+                                       # input scale: linear/log
+                                       radioButtons("scaleType", "Graph Scale",
+                                                    c("Linear" = "linear", "Log" = "log"))
+                                       
+                          )
+                        ),
                         
                         # mainbarPanel should have the plots
                         mainPanel(
@@ -70,8 +68,48 @@ ui <- fluidPage(
                             tabPanel(paste0("Across OBTAIN FACTOR 2 FROM DATA/USER")
                                      # the ggplot across factor 2 should be here
                             ),
-                            tabPanel(paste0("COMPARISON ACROSS FACTORS AND SAMPLES")
-                                     # the radar chart plot should be here
+                            tabPanel("Raw Data Plotted")
+                          )
+                        )
+                        
+                      )
+             ),
+             
+             
+             ################ UI Tab 2: Multi-Gene Analysis ################
+             tabPanel("Multi-Gene Analysis",  # part of navbarPage
+                      
+                      sidebarLayout(
+                        # sidebarPanel should have all the input needed from the user
+                        sidebarPanel(
+                          tabPanel("Gene Expression"),
+                          
+                          # drop-down list to type in gene of interest to plot
+                          # gene input, change 'choices' to a vector of all rownames of the data matrix
+                          selectInput("userGene", "Choose gene(s) to plot:", choices = c(1,2,3)),
+                          
+                          # input factors
+                          
+                          
+                          # input Graph type: Boxplot/Violin/Scatterplot/RadarCharts
+                          radioButtons("graphType", "Graph Type",
+                                       c("Scatterplot" = "scatterplot",
+                                         "Radar Chart" = "radar chart")),
+                          
+                          # input scale: linear/log
+                          radioButtons("scaleType", "Graph Scale",
+                                       c("Linear" = "linear", "Log" = "log"))
+                          
+                        ), 
+                        
+                        # mainbarPanel should have the plots
+                        mainPanel(
+                          tabsetPanel(
+                            tabPanel(paste0("Across OBTAIN FACTOR 1 FROM DATA/USER")
+                                     # the ggplot should be here
+                            ),
+                            tabPanel(paste0("Across OBTAIN FACTOR 2 FROM DATA/USER")
+                                     # the ggplot across factor 2 should be here
                             ),
                             tabPanel("Raw Data Plotted")
                           )
@@ -82,15 +120,16 @@ ui <- fluidPage(
              
              
              
-             
-             ################ UI Tab 2: Gene Trajectories ################
+             ################ UI Tab 3: Gene Trajectories ################
              tabPanel("Trajectories",
                       
                       sidebarLayout(
                         sidebarPanel(
                           # user input list of genes to plot
-                          textAreaInput("Area", "Enter a list of genes seperated by new lines, commas, or spaces:",
+                          textAreaInput("Area",
+                                        "Enter a list of genes seperated by new lines, commas, or spaces:",
                                         value = "Fndc5, Pgc1a\nBdnf, Itgb5"),
+                          
                           # add a description under the input area
                           h4("Paste genes of interest")
                         ),
@@ -106,63 +145,11 @@ ui <- fluidPage(
                         )
                       )
                       
-             ),
-             
-             
-             ################ UI Tab 3: Single Gene analysis ################
-             tabPanel("Single Gene Analysis",  # part of navbarPage
-                      
-                      
-                      
-                      # input Graph type: Boxplot/Violin
-                      radioButtons("graphType", "Graph Type",
-                                   c("Boxplot" = "boxplot", "Violin" = "violin")),
-                      
-                      # input scale: linear/log
-                      radioButtons("scaleType", "Graph Scale",
-                                   c("Linear" = "linear", "Log" = "log")),
-                      mainPanel(
-                        tabsetPanel(
-                          tabPanel(paste0("Across OBTAIN FACTOR 1 FROM DATA/USER")
-                                   # the ggplot should be here
-                          ),
-                          tabPanel(paste0("Across OBTAIN FACTOR 2 FROM DATA/USER")
-                                   # the ggplot across factor 2 should be here
-                          )
-                          
-                          
-                        )
-                      )
-                      
-             ),
-             
-             
-             ################ UI Tab 4: Multiple Gene analysis ################
-             tabPanel("Multiple Gene Analysis",  # part of navbarPage
-                      
-                      
-                      # input Graph type:Scatterplot/RadarCharts
-                      radioButtons("graphType", "Graph Type",
-                                   c("Scatterplot" = "scatterplot", "Radar Chart" = "radar chart")),
-                      # input scale: linear/log
-                      radioButtons("scaleType", "Graph Scale",
-                                   c("Linear" = "linear", "Log" = "log")),
-                      
-                      
-                      # mainbarPanel should have the plots
-                      mainPanel(
-                        tabsetPanel(
-                          
-                          tabPanel(paste0("COMPARISON ACROSS GENES AND SAMPLES")
-                                   # the radar chart plot should be here
-                          )
-                          
-                        )
-                      )
-                      
              )
+             
   )
 )
+
 
 
 ##################################################################################################################
@@ -187,6 +174,7 @@ server <- function(input, output, session) {
     read.csv(metadataFile$datapath)
   })
   
+  
   # this provides the user factors to chose
   # 'renderUI' dynamically changes by user input (i.e metadata input)
   output$metaFactors <- renderUI({
@@ -200,13 +188,19 @@ server <- function(input, output, session) {
   })
   
   
-  ################# Server Tab 1 #################
+  ################# Single-Gene Analysis #################
   
   
   
   
   
-  ################# Server Tab 2 #################
+  ################# Multi-Gene Analysis #################
+  
+  
+  
+  
+  
+  ################# Trajectories #################
   ## render plots
   output$trajPlot <- renderPlot({
     ggplot()
