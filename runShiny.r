@@ -12,7 +12,7 @@ ui <- fluidPage(
   shinythemes::shinytheme("flatly"),
   
   # name of the whole project - stays at top next to page tabs
-  navbarPage("RNA Analysis",
+  navbarPage(strong("RNA Analysis"),
              
              # main tab: title of the whole page
              tabPanel("Main",  # part of navbarPage
