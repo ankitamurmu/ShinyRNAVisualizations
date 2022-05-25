@@ -9,11 +9,12 @@ library(ggradar)
 
 
 ui <- fluidPage(
-  # this sets the entire 'theme'/style
-  shinythemes::shinytheme("flatly"),
   
   # name of the whole project - stays at top next to page tabs
   navbarPage(strong("RNA Analysis"),
+             
+             # this sets the entire 'theme'/style
+             theme = shinythemes::shinytheme("flatly"),
              
              # main tab: title of the whole page
              tabPanel("Main",  # part of navbarPage
@@ -55,108 +56,108 @@ ui <- fluidPage(
                           
                           # input Graph type: Boxplot/Violin
                           radioButtons("graphType", "Graph Type",
-                                       c("Boxplot" = "boxplot", "Violin" = "violin"),
-                                       
-                                       # input scale: linear/log
-                                       radioButtons("scaleType", "Graph Scale",
-                                                    c("Linear" = "linear", "Log" = "log"))
-                                       
-                          )
-                        ),
-                        
-                        # mainbarPanel should have the plots
-                        mainPanel(
-                          tabsetPanel(
-                            tabPanel(paste0("Across OBTAIN FACTOR 1 FROM DATA/USER")
-                                     # the ggplot should be here
-                            ),
-                            tabPanel(paste0("Across OBTAIN FACTOR 2 FROM DATA/USER")
-                                     # the ggplot across factor 2 should be here
-                            ),
-                            tabPanel("Raw Data Plotted"),
-                            plotOutput("singlegene_plot")
-                          )
-                        )
-                        
-                      )
-             ),
-             
-             
-             ################ UI Tab 2: Multi-Gene Analysis ################
-             tabPanel("Multi-Gene Analysis",  # part of navbarPage
-                      
-                      sidebarLayout(
-                        # sidebarPanel should have all the input needed from the user
-                        sidebarPanel(
-                          tabPanel("Gene Expression"),
-                          
-                          # drop-down list to type in gene of interest to plot
-                          # gene input, change 'choices' to a vector of all rownames of the data matrix
-                          selectInput("userGene", "Choose gene(s) to plot:", choices = c(1,2,3)),
-                          
-                          # input factors
-                          
-                          
-                          # input Graph type: Boxplot/Violin/Scatterplot/RadarCharts
-                          radioButtons("graphType", "Graph Type",
-                                       c("Scatterplot" = "scatterplot",
-                                         "Radar Chart" = "radar chart")),
+                                       c("Boxplot" = "boxplot", "Violin" = "violin")),
                           
                           # input scale: linear/log
                           radioButtons("scaleType", "Graph Scale",
                                        c("Linear" = "linear", "Log" = "log"))
                           
-                        ), 
-                        
-                        # mainbarPanel should have the plots
-                        mainPanel(
-                          tabsetPanel(
-                            tabPanel(paste0("Across OBTAIN FACTOR 1 FROM DATA/USER")
-                                     # the ggplot should be here
-                            ),
-                            tabPanel(paste0("Across OBTAIN FACTOR 2 FROM DATA/USER")
-                                     # the ggplot across factor 2 should be here
-                            ),
-                            tabPanel("Raw Data Plotted"),
-                            plotOutput("multigene_plot")
-                          )
                         )
-                        
-                      )
-             ),
-             
-             
-             
-             ################ UI Tab 3: Gene Trajectories ################
-             tabPanel("Trajectories",
+                      ),
                       
-                      sidebarLayout(
-                        sidebarPanel(
-                          # user input list of genes to plot
-                          textAreaInput("trajGenes",
-                                        "Enter a list of genes seperated by new lines, commas, or spaces:",
-                                        value = "Fndc5, Pgc1a\nBdnf, Itgb5"),
-                          
-                          # add a description under the input area
-                          h4("Paste genes of interest")
-                        ),
-                        
-                        # should contain graphs and DT table
-                        mainPanel(
-                          tabsetPanel(
-                            tabPanel("Trajectories Plot",
-                              plotOutput("trajPlot")
-                                     ),
-                            
-                            tabPanel("Query Info")
-                          )
-                          
+                      # mainbarPanel should have the plots
+                      mainPanel(
+                        tabsetPanel(
+                          tabPanel(paste0("Across OBTAIN FACTOR 1 FROM DATA/USER")
+                                   # the ggplot should be here
+                          ),
+                          tabPanel(paste0("Across OBTAIN FACTOR 2 FROM DATA/USER")
+                                   # the ggplot across factor 2 should be here
+                          ),
+                          tabPanel("Raw Data Plotted",
+                          plotOutput("singlegene_plot")
                         )
                       )
                       
              )
+  ),
+  
+  
+  ################ UI Tab 2: Multi-Gene Analysis ################
+  tabPanel("Multi-Gene Analysis",  # part of navbarPage
+           
+           sidebarLayout(
+             # sidebarPanel should have all the input needed from the user
+             sidebarPanel(
+               tabPanel("Gene Expression"),
+               
+               # drop-down list to type in gene of interest to plot
+               # gene input, change 'choices' to a vector of all rownames of the data matrix
+               selectInput("userGene", "Choose gene(s) to plot:", choices = c(1,2,3)),
+               
+               # input factors
+               
+               
+               # input Graph type: Boxplot/Violin/Scatterplot/RadarCharts
+               radioButtons("graphType", "Graph Type",
+                            c("Scatterplot" = "scatterplot",
+                              "Radar Chart" = "radar chart")),
+               
+               # input scale: linear/log
+               radioButtons("scaleType", "Graph Scale",
+                            c("Linear" = "linear", "Log" = "log"))
+               
+             ), 
              
+             # mainbarPanel should have the plots
+             mainPanel(
+               tabsetPanel(
+                 tabPanel(paste0("Across OBTAIN FACTOR 1 FROM DATA/USER")
+                          # the ggplot should be here
+                 ),
+                 tabPanel(paste0("Across OBTAIN FACTOR 2 FROM DATA/USER")
+                          # the ggplot across factor 2 should be here
+                 ),
+                 tabPanel("Raw Data Plotted"),
+                 plotOutput("multigene_plot")
+               )
+             )
+             
+           )
+  ),
+  
+  
+  
+  ################ UI Tab 3: Gene Trajectories ################
+  tabPanel("Trajectories",
+           
+           sidebarLayout(
+             sidebarPanel(
+               # user input list of genes to plot
+               textAreaInput("trajGenes",
+                             "Enter a list of genes seperated by new lines, commas, or spaces:",
+                             value = "Fndc5, Pgc1a\nBdnf, Itgb5"),
+               
+               # add a description under the input area
+               h4("Paste genes of interest")
+             ),
+             
+             # should contain graphs and DT table
+             mainPanel(
+               tabsetPanel(
+                 tabPanel("Trajectories Plot",
+                          plotOutput("trajPlot")
+                 ),
+                 
+                 tabPanel("Query Info")
+               )
+               
+             )
+           )
+           
   )
+  
+)
 )
 
 
@@ -219,7 +220,7 @@ server <- function(input, output, session) {
   
   ################# Single-Gene Analysis #################
   
-  data <-reactive({
+  data <- reactive({
     req(input$userGene, input$graphType)
     
   })  
