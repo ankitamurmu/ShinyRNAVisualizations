@@ -13,7 +13,7 @@ ui <- fluidPage(
   shinythemes::shinytheme("flatly"),
   
   # name of the whole project - stays at top next to page tabs
-  navbarPage("RNA Analysis",
+  navbarPage(strong("RNA Analysis"),
              
              # main tab: title of the whole page
              tabPanel("Main",  # part of navbarPage
@@ -73,7 +73,8 @@ ui <- fluidPage(
                             tabPanel(paste0("Across OBTAIN FACTOR 2 FROM DATA/USER")
                                      # the ggplot across factor 2 should be here
                             ),
-                            tabPanel("Raw Data Plotted")
+                            tabPanel("Raw Data Plotted"),
+                            plotOutput("singlegene_plot")
                           )
                         )
                         
@@ -116,7 +117,8 @@ ui <- fluidPage(
                             tabPanel(paste0("Across OBTAIN FACTOR 2 FROM DATA/USER")
                                      # the ggplot across factor 2 should be here
                             ),
-                            tabPanel("Raw Data Plotted")
+                            tabPanel("Raw Data Plotted"),
+                            plotOutput("multigene_plot")
                           )
                         )
                         
@@ -217,13 +219,32 @@ server <- function(input, output, session) {
   
   ################# Single-Gene Analysis #################
   
+  data <-reactive({
+    req(input$userGene, input$graphType)
+    
+  })  
+  
+  output$singlegene_plot <- renderPlot({ 
+    g <- ggplot(data(), aes(y = factor, x = gene), fill = gene, colour = "blue")
+    g <- geom_boxplot()
+    
+    
+    
+  })
   
   
   
   
   ################# Multi-Gene Analysis #################
   
-  
+  output$multigene_plot <- renderPlot({ 
+    g <- ggradarggradar(values.radar = c(0, 0.5, 1),
+                        axis.labels = paste0("rownames"),legend.title = "rownames",
+                        legend.position = "bottom", background.circle.colour = "white")
+    
+    
+    
+  })
   
   
   
