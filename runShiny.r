@@ -1,5 +1,6 @@
 #### Libraries ####
 library(shiny)
+library(ggplot2)
 library(dplyr)
 library(plotly)
 library(shinythemes)
@@ -28,7 +29,11 @@ ui <- fluidPage(
                       fileInput("inputMetadata", "Enter a metadata .csv or .xlsx file for the counts matrix:", width = '35%'),
                       
                       # present factors from metadata, and let the user choose factors from drop-down to check
-                      uiOutput("metaFactors")
+                      # this should be something more elegant..
+                      uiOutput("metaFactors"),
+                      
+                      # look at head(data), currently for TESTING purposes
+                      tableOutput("dataMatPeek")
              ),
              
              
@@ -126,7 +131,7 @@ ui <- fluidPage(
                       sidebarLayout(
                         sidebarPanel(
                           # user input list of genes to plot
-                          textAreaInput("Area",
+                          textAreaInput("trajGenes",
                                         "Enter a list of genes seperated by new lines, commas, or spaces:",
                                         value = "Fndc5, Pgc1a\nBdnf, Itgb5"),
                           
@@ -137,7 +142,9 @@ ui <- fluidPage(
                         # should contain graphs and DT table
                         mainPanel(
                           tabsetPanel(
-                            tabPanel("Trajectories Plot"),
+                            tabPanel("Trajectories Plot",
+                              plotOutput("trajPlot")
+                                     ),
                             
                             tabPanel("Query Info")
                           )
@@ -162,6 +169,21 @@ server <- function(input, output, session) {
   
   ################# Input Tab #################
   
+  ##### data matrix reader #####
+  # reactive functions should be used when an operation is done more than once (e.g reading an input)
+  dataMatReader <- reactive({
+    # await user input in the relevant fileInput
+    dataFile <- input$inputData
+    
+    # suppresses error, basically waits for input before it continues render function
+    req(dataFile)
+    
+    # read the uniquely produced datapath, read the file
+    # consider looking at the extension 
+    read.csv(dataFile$datapath)
+  })
+  
+  ##### metadata #####
   # reactive functions should be used when an operation is done more than once (e.g reading an input)
   metadataReader <- reactive({
     # await user input in the relevant fileInput
@@ -188,6 +210,11 @@ server <- function(input, output, session) {
   })
   
   
+  # look at input data
+  output$dataMatPeek <- renderTable({
+    head(dataMatReader())
+  })
+  
   ################# Single-Gene Analysis #################
   
   
@@ -203,12 +230,19 @@ server <- function(input, output, session) {
   ################# Trajectories #################
   ## render plots
   output$trajPlot <- renderPlot({
+    # transform matrix to z score matrix
+    
     ggplot()
+    # # load the data matrix
+    # plotData <- dataMatReader()
+    # ggplot(plotData, aes(x = input$trajGenes, y = )) +
+    #   geom_line()
   })
   
   
   ## render interactive DT table
 }
+
 
 
 ##### this connects the two and runs the shiny app #####
