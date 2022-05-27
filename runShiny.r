@@ -227,9 +227,14 @@ server <- function(input, output, session){
     
   })  
   
-  output$singlegene_plot <- renderPlot({ 
-    g <- ggplot(data(), aes(y = factor, x = gene), fill = gene, colour = "blue")
-    g <- geom_boxplot()
+   output$singlegene_plot <- renderPlot({ 
+    g <- ggplot(data(), aes(y = factor, x = gene), fill = gene)+
+      geom_boxplot(outlier.shape = 8,outlier.size = 4)+
+      theme_minimal()
+    
+    #save the plot
+    #ggsave(filename,device = "png", width = , height = ,)
+    #ggsave (filename, device = "pdf",width = , height = ,)
     
     
     
@@ -240,10 +245,10 @@ server <- function(input, output, session){
   
   ################# Multi-Gene Analysis #################
   
-  output$multigene_plot <- renderPlot({ 
-    g <- ggradarggradar(values.radar = c(0, 0.5, 1),
+  g <- ggradar(data (), values.radar = c(0, 0.5, 1),
                         axis.labels = paste0("rownames"),legend.title = "rownames",
-                        legend.position = "bottom", background.circle.colour = "white")
+                        legend.position = "bottom", background.circle.colour = "white",
+                        axis.label.size = 8, group.point.size = 3)
     
     
     
