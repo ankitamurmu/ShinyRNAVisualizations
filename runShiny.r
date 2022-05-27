@@ -34,12 +34,13 @@ ui <- fluidPage(
                       uiOutput("metaFactors"),
                       
                       # look at head(data), currently for TESTING purposes
-                      tableOutput("dataMatPeek")
+                      tableOutput("dataMatPeek"),
+                      tableOutput("metadataMatPeek")
              ),
              
              
              
-             ################ UI Tab 1: Single Gene Analysis ################
+             ################################# UI Tab 1: Single Gene Analysis #################################
              tabPanel("Single Gene Analysis",  # part of navbarPage
                       
                       sidebarLayout(
@@ -84,7 +85,7 @@ ui <- fluidPage(
              ),
              
              
-             ################ UI Tab 2: Multi-Gene Analysis ################
+             ################################# UI Tab 2: Multi-Gene Analysis #################################
              tabPanel("Multi-Gene Analysis",  # part of navbarPage
                       
                       sidebarLayout(
@@ -129,7 +130,7 @@ ui <- fluidPage(
              
              
              
-             ################ UI Tab 3: Gene Trajectories ################
+             ################################# UI Tab 3: Gene Trajectories #################################
              tabPanel("Trajectories",
                       
                       sidebarLayout(
@@ -172,7 +173,7 @@ server <- function(input, output, session){
   # change the default limit of 5MB user uploads to 200MB (sample data is 129MB)
   options(shiny.maxRequestSize=200*1024^2)
   
-  ################# Input Tab #################
+  ################################## Input Tab ##################################
   
   ##### data matrix reader #####
   # reactive functions should be used when an operation is done more than once (e.g reading an input)
@@ -220,7 +221,12 @@ server <- function(input, output, session){
     head(dataMatReader())
   })
   
-  ################# Single-Gene Analysis #################
+  # look at input metadata
+  output$metadataMatPeek <- renderTable({
+    head(metadataReader())
+  })
+  
+  ################################## Single-Gene Analysis ##################################
   
   data <- reactive({
     req(input$userGene, input$graphType)
@@ -238,7 +244,7 @@ server <- function(input, output, session){
   
   
   
-  ################# Multi-Gene Analysis #################
+  ################################## Multi-Gene Analysis ##################################
   
   output$multigene_plot <- renderPlot({ 
     g <- ggradarggradar(values.radar = c(0, 0.5, 1),
@@ -251,7 +257,7 @@ server <- function(input, output, session){
   
   
   
-  ################# Trajectories #################
+  ################################## Trajectories ##################################
   ## render plots
   output$trajPlot <- renderPlot({
     # transform matrix to z score matrix
