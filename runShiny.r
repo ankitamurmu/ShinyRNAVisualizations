@@ -1,5 +1,6 @@
 #### Libraries ####
 library(shiny)
+library(tidyr)
 library(ggplot2)
 library(dplyr)
 library(plotly)
@@ -9,12 +10,27 @@ library(ggradar)
 
 
 ## function to convert data to ggplot style ('longer')
-filterAndConvert <- function(dataLoader, plotGenes, conditions){
+filterAndConvert <- function(dataLoader, metadataLoader, plotGenes, conditions){
+  # write here a good explanation
   # NOW: gene, sample1, sample2, sample3...
   # NEED: gene, samples, value, factor 1, factor 2?
+  
+  metadata <- metadataLoader
+  metadataSampleColumn <- colnames(metadata)[1]
+  # keep only the relevant columns in metadata: sample names and chosen conditions/factors
+  metadata <- metadata %>%
+    dplyr::select(all_of(metadataSampleColumn),
+                  all_of(conditions))
+  
   convertedData <- dataLoader %>%
+    # filter for the user-chosen genes in the plotting tabs
     filter(gene %in% plotGenes) %>%
-    pivot_longer()
+    # convert to long matrix
+    tidyr::pivot_longer(cols = !gene,
+                 names_to = "Samples",
+                 values_to = "Expression") %>%
+    # join with metadata to retrieve all metadata information for each row
+    left_join(metadata, by = c("Samples" = metadataSampleColumn))
 }
 
 
@@ -45,7 +61,8 @@ ui <- fluidPage(
                       
                       # look at head(data), currently for TESTING purposes
                       tableOutput("dataMatPeek"),
-                      tableOutput("metadataMatPeek")
+                      tableOutput("metadataMatPeek"),
+                      tableOutput("filteredConverted")
              ),
              
              
@@ -234,6 +251,14 @@ server <- function(input, output, session){
   # look at input metadata
   output$metadataMatPeek <- renderTable({
     head(metadataReader())
+  })
+  
+  output$filteredConverted <- renderTable({
+    head(filterAndConvert(dataLoader = dataMatReader(),
+                          metadataLoader =  metadataReader(),
+                          plotGenes = c("Fndc5","Bdnf"),
+                          # change conditions to the input of factors from first page
+                          conditions = c("source.name", "characteristics..age")))
   })
   
   ################################## Single-Gene Analysis ##################################
