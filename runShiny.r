@@ -7,17 +7,21 @@ library(plotly)
 library(shinythemes)
 library(DT)
 library(ggradar)
+library(readr)
 
 
 ## function to convert data to ggplot style ('longer')
 filterAndConvert <- function(dataLoader, metadataLoader, plotGenes, conditions){
-  # write here a good explanation
-  # NOW: gene, sample1, sample2, sample3...
-  # NEED: gene, samples, value, factor 1, factor 2?
+  ### Produces a matrix with columns of "Gene, Sample, Expression, Conditions1, Condition2, ..." ###
+  ### This is a convenient form for plotting with ggplot. ###
+  # dataLoader: reactive that loads expression matrix.
+  # metadataLoader: reactive that loads metadata matrix.
+  # plotGenes: user-inputted genes to plot.
+  # conditions: user-inputted conditions of interest.
   
   metadata <- metadataLoader
   metadataSampleColumn <- colnames(metadata)[1]
-  # keep only the relevant columns in metadata: sample names and chosen conditions/factors
+  # keep only the relevant columns in metadata: sample names and user-chosen conditions/factors
   metadata <- metadata %>%
     dplyr::select(all_of(metadataSampleColumn),
                   all_of(conditions))
@@ -56,13 +60,15 @@ ui <- fluidPage(
                       fileInput("inputMetadata", "Enter a metadata .csv or .xlsx file for the counts matrix:", width = '35%'),
                       
                       # present factors from metadata, and let the user choose factors from drop-down to check
-                      # this should be something more elegant..
-                      uiOutput("metaFactors"),
+                      selectizeInput("chosenFactors",
+                                     "Choose all factors you wish to analyze:",
+                                     choices = NULL,
+                                     multiple = TRUE),
                       
                       # look at head(data), currently for TESTING purposes
+                      tableOutput("filteredConverted"),
                       tableOutput("dataMatPeek"),
-                      tableOutput("metadataMatPeek"),
-                      tableOutput("filteredConverted")
+                      tableOutput("metadataMatPeek")
              ),
              
              
@@ -212,8 +218,8 @@ server <- function(input, output, session){
     req(dataFile)
     
     # read the uniquely produced datapath, read the file
-    # consider looking at the extension 
-    read.csv(dataFile$datapath)
+    #TODO consider looking at the extension to change ',' if needed
+    readr::read_delim(dataFile$datapath, ",", col_names = TRUE, show_col_types = FALSE)
   })
   
   ##### metadata #####
@@ -226,21 +232,20 @@ server <- function(input, output, session){
     req(metadataFile)
     
     # read the uniquely produced datapath, read the file
-    read.csv(metadataFile$datapath)
+    readr::read_delim(metadataFile$datapath, ",", col_names = TRUE, show_col_types = FALSE)
   })
   
   
   # this provides the user factors to chose
   # 'renderUI' dynamically changes by user input (i.e metadata input)
-  output$metaFactors <- renderUI({
-    
-    # extract the colnames by calling the metadataReader reactive function
-    factorNames <- colnames(metadataReader())
-    
-    # to make an input that changes conditionally, it must be added here
-    selectizeInput("factorsChosen", "Choose all factors you wish to analyze:",
-                       choices = factorNames, multiple = TRUE)
-  })
+  
+  observeEvent(
+    input$inputMetadata, {
+      updateSelectizeInput(session = session, "chosenFactors",
+                           "Choose all factors you wish to analyze:",
+                           choices = colnames(metadataReader()),
+                           server = TRUE)
+    })
   
   
   # look at input data
@@ -258,7 +263,7 @@ server <- function(input, output, session){
                           metadataLoader =  metadataReader(),
                           plotGenes = c("Fndc5","Bdnf"),
                           # change conditions to the input of factors from first page
-                          conditions = c("source.name", "characteristics..age")))
+                          conditions = input$chosenFactors))
   })
   
   ################################## Single-Gene Analysis ##################################
