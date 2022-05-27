@@ -8,16 +8,26 @@ library(DT)
 library(ggradar)
 
 
+## function to convert data to ggplot style ('longer')
+filterAndConvert <- function(dataLoader, plotGenes, conditions){
+  # NOW: gene, sample1, sample2, sample3...
+  # NEED: gene, samples, value, factor 1, factor 2?
+  convertedData <- dataLoader %>%
+    filter(gene %in% plotGenes) %>%
+    pivot_longer()
+}
+
+
 ui <- fluidPage(
-  
+  titlePanel("Shiny RNA Visualizations"),
   # name of the whole project - stays at top next to page tabs
-  navbarPage(strong("RNA Analysis"),
+  navbarPage(strong("Analyses Tabs:"),
              
              # this sets the entire 'theme'/style
              theme = shinythemes::shinytheme("flatly"),
              
              # main tab: title of the whole page
-             tabPanel("Main",  # part of navbarPage
+             tabPanel("Input Data",  # part of navbarPage
                       
                       titlePanel("Input Data"),
                       
@@ -211,8 +221,8 @@ server <- function(input, output, session){
     factorNames <- colnames(metadataReader())
     
     # to make an input that changes conditionally, it must be added here
-    checkboxGroupInput("factorsChosen", "Choose all factors you wish to analyze:",
-                       choices = factorNames)
+    selectizeInput("factorsChosen", "Choose all factors you wish to analyze:",
+                       choices = factorNames, multiple = TRUE)
   })
   
   
@@ -233,7 +243,7 @@ server <- function(input, output, session){
     
   })  
   
-   output$singlegene_plot <- renderPlot({ 
+  output$singlegene_plot <- renderPlot({ 
     g <- ggplot(data(), aes(y = factor, x = gene), fill = gene)+
       geom_boxplot(outlier.shape = 8,outlier.size = 4)+
       theme_minimal()
@@ -251,10 +261,11 @@ server <- function(input, output, session){
   
   ################################## Multi-Gene Analysis ##################################
   
-  g <- ggradar(data (), values.radar = c(0, 0.5, 1),
-                        axis.labels = paste0("rownames"),legend.title = "rownames",
-                        legend.position = "bottom", background.circle.colour = "white",
-                        axis.label.size = 8, group.point.size = 3)
+  output$multiGenePlot <- renderPlot({
+    g <- ggradar(data (), values.radar = c(0, 0.5, 1),
+                 axis.labels = paste0("rownames"),legend.title = "rownames",
+                 legend.position = "bottom", background.circle.colour = "white",
+                 axis.label.size = 8, group.point.size = 3)
     
     
     
