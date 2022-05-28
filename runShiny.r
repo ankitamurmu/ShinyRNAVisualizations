@@ -8,6 +8,7 @@ library(shinythemes)
 library(DT)
 library(ggradar)
 library(readr)
+library(stringr)
 
 
 ## function to convert data to ggplot style ('longer')
@@ -28,11 +29,12 @@ filterAndConvert <- function(dataLoader, metadataLoader, plotGenes, conditions){
   
   convertedData <- dataLoader %>%
     # filter for the user-chosen genes in the plotting tabs
+    #TODO: 'gene' here is problematic, it should be a general name/code
     filter(gene %in% plotGenes) %>%
     # convert to long matrix
     tidyr::pivot_longer(cols = !gene,
-                 names_to = "Samples",
-                 values_to = "Expression") %>%
+                        names_to = "Samples",
+                        values_to = "Expression") %>%
     # join with metadata to retrieve all metadata information for each row
     left_join(metadata, by = c("Samples" = metadataSampleColumn))
 }
@@ -66,7 +68,7 @@ ui <- fluidPage(
                                      multiple = TRUE),
                       
                       # look at head(data), currently for TESTING purposes
-                      tableOutput("filteredConverted"),
+                      DT::dataTableOutput("filteredConverted"),
                       tableOutput("dataMatPeek"),
                       tableOutput("metadataMatPeek")
              ),
@@ -83,7 +85,8 @@ ui <- fluidPage(
                           
                           # drop-down list to type in gene of interest to plot
                           # gene input, change 'choices' to a vector of all rownames of the data matrix
-                          selectInput("userGene", "Choose a gene to plot:", choices = c(1,2,3)),
+                          selectizeInput("userGeneSingle", "Choose a gene to plot:",
+                                         choices = NULL, selected = "Fndc5"),
                           
                           # input factors
                           #
@@ -101,20 +104,21 @@ ui <- fluidPage(
                         
                         # mainbarPanel should have the plots
                         mainPanel(
-                          tabsetPanel(
-                            tabPanel(paste0("Across OBTAIN FACTOR 1 FROM DATA/USER")
-                                     # the ggplot should be here
+                          tabsetPanel(id = "plotTabSingle",
+                            tabPanel(paste0("Across OBTAIN FACTOR 1 FROM DATA/USER"),
+                                     value = "factorSingle1",
+                                     plotOutput("singlegene_plot1")
                             ),
-                            tabPanel(paste0("Across OBTAIN FACTOR 2 FROM DATA/USER")
-                                     # the ggplot across factor 2 should be here
-                            ),
-                            tabPanel("Raw Data Plotted",
-                                     plotOutput("singlegene_plot")
+                            tabPanel(paste0("Across OBTAIN FACTOR 2 FROM DATA/USER"),
+                                     value = "factorSingle2",
+                                     plotOutput("singlegene_plot2")
                             )
+                            
                           )
                           
                         )
                       )
+                      # DT DataTable of plotted data
              ),
              
              
@@ -128,7 +132,7 @@ ui <- fluidPage(
                           
                           # drop-down list to type in gene of interest to plot
                           # gene input, change 'choices' to a vector of all rownames of the data matrix
-                          selectInput("userGene", "Choose gene(s) to plot:", choices = c(1,2,3)),
+                          selectInput("userGeneMulti", "Choose gene(s) to plot:", choices = c(1,2,3)),
                           
                           # input factors
                           
@@ -147,14 +151,13 @@ ui <- fluidPage(
                         # mainbarPanel should have the plots
                         mainPanel(
                           tabsetPanel(
-                            tabPanel(paste0("Across OBTAIN FACTOR 1 FROM DATA/USER")
-                                     # the ggplot should be here
+                            tabPanel(paste0("Across OBTAIN FACTOR 1 FROM DATA/USER"),
+                                     plotOutput("multigene_plot")
                             ),
                             tabPanel(paste0("Across OBTAIN FACTOR 2 FROM DATA/USER")
                                      # the ggplot across factor 2 should be here
                             ),
-                            tabPanel("Raw Data Plotted"),
-                            plotOutput("multigene_plot")
+                            
                           )
                         )
                         
@@ -209,7 +212,6 @@ server <- function(input, output, session){
   ################################## Input Tab ##################################
   
   ##### data matrix reader #####
-  # reactive functions should be used when an operation is done more than once (e.g reading an input)
   dataMatReader <- reactive({
     # await user input in the relevant fileInput
     dataFile <- input$inputData
@@ -223,7 +225,6 @@ server <- function(input, output, session){
   })
   
   ##### metadata #####
-  # reactive functions should be used when an operation is done more than once (e.g reading an input)
   metadataReader <- reactive({
     # await user input in the relevant fileInput
     metadataFile <- input$inputMetadata
@@ -232,13 +233,18 @@ server <- function(input, output, session){
     req(metadataFile)
     
     # read the uniquely produced datapath, read the file
-    readr::read_delim(metadataFile$datapath, ",", col_names = TRUE, show_col_types = FALSE)
+    metadata <- readr::read_delim(metadataFile$datapath, ",", col_names = TRUE,
+                                  show_col_types = FALSE)
+    
+    newColnames <- str_replace_all(colnames(metadata), " ", "_") %>%
+      str_replace_all(":", "_")
+    colnames(metadata) <- newColnames
+    
+    return(metadata)
   })
   
   
   # this provides the user factors to chose
-  # 'renderUI' dynamically changes by user input (i.e metadata input)
-  
   observeEvent(
     input$inputMetadata, {
       updateSelectizeInput(session = session, "chosenFactors",
@@ -258,34 +264,88 @@ server <- function(input, output, session){
     head(metadataReader())
   })
   
-  output$filteredConverted <- renderTable({
-    head(filterAndConvert(dataLoader = dataMatReader(),
-                          metadataLoader =  metadataReader(),
-                          plotGenes = c("Fndc5","Bdnf"),
-                          # change conditions to the input of factors from first page
-                          conditions = input$chosenFactors))
+  # peek at the plot-ready data with factors by user
+  output$filteredConverted <- renderDT({
+    plotData <- filterAndConvert(dataLoader = dataMatReader(),
+                                 metadataLoader = metadataReader(),
+                                 plotGenes = c("Fndc5","Bdnf"),
+                                 # change conditions to the input of factors from first page
+                                 conditions = input$chosenFactors)
+    
+    DT::datatable(plotData)
   })
   
   ################################## Single-Gene Analysis ##################################
   
+  # updates selection based on input matrix gene names
+  observeEvent(
+    input$inputData, {
+      updateSelectizeInput(session = session, "userGeneSingle", "Choose a gene to plot:",
+                           #TODO change $gene to a general call
+                           choices = dataMatReader()$gene,
+                           server = TRUE)
+    })
+
   data <- reactive({
     req(input$userGene, input$graphType)
     
   })  
+
+  # output$singlegene_plot <- renderPlot({
+  #   g <- ggplot(data(), aes(y = factor, x = gene), fill = gene) +
+  #     geom_boxplot(outlier.shape = 8, outlier.size = 4) +
+  #     theme_minimal()
+  # 
+  #   #save the plot
+  #   #ggsave(filename,device = "png", width = , height = ,)
+  #   #ggsave (filename, device = "pdf",width = , height = ,)
+  # 
+  # 
+  # 
+  # })
   
-  output$singlegene_plot <- renderPlot({ 
-    g <- ggplot(data(), aes(y = factor, x = gene), fill = gene)+
-      geom_boxplot(outlier.shape = 8,outlier.size = 4)+
-      theme_minimal()
+  singlegene_plot <- reactive({
+    plotData <- filterAndConvert(dataLoader = dataMatReader(),
+                                 metadataLoader = metadataReader(),
+                                 plotGenes = input$userGeneSingle,
+                                 conditions = input$chosenFactors)
     
-    #save the plot
-    #ggsave(filename,device = "png", width = , height = ,)
-    #ggsave (filename, device = "pdf",width = , height = ,)
+    firstCondition <- input$chosenFactors[1]
+    secondCondition <- input$chosenFactors[2]
     
+    # dynamically choose the plot variable ordering between tabs
+    xAxVar <- switch(input$plotTabSingle,
+                     "factorSingle1" = firstCondition,
+                     "factorSingle2" = secondCondition)
+    facetVar <- switch(input$plotTabSingle,
+                       "factorSingle1" = secondCondition,
+                       "factorSingle2" = firstCondition)
     
-    
+    # the full ggplot call
+    ggplot(plotData, aes_string(x = xAxVar, y = "Expression")) +
+      
+      # boxplot/violin based on user input
+      switch(input$graphType,
+             "boxplot" = list(geom_boxplot(aes_string(color = xAxVar), outlier.shape = NA),
+                              geom_point(aes_string(alpha = 0.3, size = 5, color = xAxVar),
+                                         position = position_jitterdodge())),
+             "violin" = geom_violin(aes_string(fill = xAxVar), trim = FALSE)) +
+      
+      ylab("Expression") +
+      xlab(switch(input$plotTabSingle,
+                  "factorSingle1" = "Time","factorSingle2" = "Condition")) +
+      facet_wrap(~(facetVar)) +
+      theme(legend.position = "none") +
+      
+      # y scale based on user input
+      switch(input$scaleType, "linear" = scale_y_continuous(), "log" = scale_y_log10())
   })
   
+  ## Single Gene Plot
+  # funny assignment because shiny (HTML actually) can't handle same named outputs
+  output$singlegene_plot1 <- output$singlegene_plot2 <- renderPlot({
+    singlegene_plot()
+  })
   
   
   
