@@ -36,7 +36,7 @@ filterAndConvert <- function(dataLoader, metadataLoader, plotGenes, conditions){
                         names_to = "Samples",
                         values_to = "Expression") %>%
     # join with metadata to retrieve all metadata information for each row
-    left_join(metadata, by = c("Samples" = metadataSampleColumn))
+    inner_join(metadata, by = c("Samples" = metadataSampleColumn))
 }
 
 
@@ -117,8 +117,9 @@ ui <- fluidPage(
                           )
                           
                         )
-                      )
+                      ),
                       # DT DataTable of plotted data
+                      DT::dataTableOutput("singleGeneTable")
              ),
              
              
@@ -236,6 +237,8 @@ server <- function(input, output, session){
     metadata <- readr::read_delim(metadataFile$datapath, ",", col_names = TRUE,
                                   show_col_types = FALSE)
     
+    # remove problematic characters from colnames
+    #TODO: remove all possible interferences, and more elegantly than these multiple calls
     newColnames <- str_replace_all(colnames(metadata), " ", "_") %>%
       str_replace_all(":", "_")
     colnames(metadata) <- newColnames
@@ -304,12 +307,16 @@ server <- function(input, output, session){
   # 
   # })
   
+  
+  ## prepare plot for plotting
   singlegene_plot <- reactive({
     plotData <- filterAndConvert(dataLoader = dataMatReader(),
                                  metadataLoader = metadataReader(),
                                  plotGenes = input$userGeneSingle,
                                  conditions = input$chosenFactors)
     
+    # the 2 factors to plot
+    #TODO: let the user choose which 2 factors to plot, if they chose more than 2 factors initially
     firstCondition <- input$chosenFactors[1]
     secondCondition <- input$chosenFactors[2]
     
@@ -321,8 +328,11 @@ server <- function(input, output, session){
                        "factorSingle1" = secondCondition,
                        "factorSingle2" = firstCondition)
     
+    plotData$facet <- plotData[[facetVar]]
+    
     # the full ggplot call
-    ggplot(plotData, aes_string(x = xAxVar, y = "Expression")) +
+    ggplot(plotData, aes_string(x = xAxVar, y = "Expression",
+                                group = xAxVar)) +
       
       # boxplot/violin based on user input
       switch(input$graphType,
@@ -332,9 +342,8 @@ server <- function(input, output, session){
              "violin" = geom_violin(aes_string(fill = xAxVar), trim = FALSE)) +
       
       ylab("Expression") +
-      xlab(switch(input$plotTabSingle,
-                  "factorSingle1" = "Time","factorSingle2" = "Condition")) +
-      facet_wrap(~(facetVar)) +
+      xlab(xAxVar) +
+      facet_wrap(~facet, ncol = 2) +
       theme(legend.position = "none") +
       
       # y scale based on user input
@@ -347,7 +356,14 @@ server <- function(input, output, session){
     singlegene_plot()
   })
   
-  
+  output$singleGeneTable <- renderDT({
+    plotData <- filterAndConvert(dataLoader = dataMatReader(),
+                                 metadataLoader = metadataReader(),
+                                 plotGenes = input$userGeneSingle,
+                                 conditions = input$chosenFactors)
+    
+    DT::datatable(plotData)
+  })
   
   ################################## Multi-Gene Analysis ##################################
   
