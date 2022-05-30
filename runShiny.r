@@ -324,8 +324,8 @@ server <- function(input, output, session){
                                  conditions = input$plotFactorsSingle)
     
     # the 2 factors to plot
-    firstCondition <- input$chosenFactors[1]
-    secondCondition <- input$chosenFactors[2]
+    firstCondition <- input$plotFactorsSingle[1]
+    secondCondition <- input$plotFactorsSingle[2]
     
     # dynamically choose the plot variable ordering between tabs
     xAxVar <- switch(input$plotTabSingle,
