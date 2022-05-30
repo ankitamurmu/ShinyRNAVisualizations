@@ -89,8 +89,10 @@ ui <- fluidPage(
                                          choices = NULL, selected = "Fndc5"),
                           
                           # input factors
-                          #
-                          
+                          selectizeInput("plotFactorsSingle",
+                                         "Select 2 factors to plot by (based on input in 'Input Data' tab):",
+                                         choices = NULL, multiple = TRUE),
+
                           # input Graph type: Boxplot/Violin
                           radioButtons("graphType", "Graph Type",
                                        c("Boxplot" = "boxplot", "Violin" = "violin")),
@@ -280,19 +282,25 @@ server <- function(input, output, session){
   
   ################################## Single-Gene Analysis ##################################
   
-  # updates selection based on input matrix gene names
+  ## updates sidePanel gene selectizeInput based on input matrix gene names
   observeEvent(
     input$inputData, {
       updateSelectizeInput(session = session, "userGeneSingle", "Choose a gene to plot:",
-                           #TODO change $gene to a general call
+                           #TODO change '$gene' to a general call
                            choices = dataMatReader()$gene,
                            server = TRUE)
     })
 
-  data <- reactive({
-    req(input$userGene, input$graphType)
-    
-  })  
+  ## make an updating choice selection for factors to plot;
+  #TODO: default to first 2 factors chosen
+  observeEvent(
+    input$chosenFactors, {
+      updateSelectizeInput(session = session, "plotFactorsSingle",
+                           "Select 2 factors to plot by (based on input in 'Input Data' tab):",
+                           choices = input$chosenFactors,
+                           server = TRUE, selected = input$chosenFactors[1:2],
+                           options = list(maxItems = 2))
+    })
 
   # output$singlegene_plot <- renderPlot({
   #   g <- ggplot(data(), aes(y = factor, x = gene), fill = gene) +
@@ -308,15 +316,14 @@ server <- function(input, output, session){
   # })
   
   
-  ## prepare plot for plotting
+  ## prepare both plots dynamically by tab chosen (input$plotTabSingle)
   singlegene_plot <- reactive({
     plotData <- filterAndConvert(dataLoader = dataMatReader(),
                                  metadataLoader = metadataReader(),
                                  plotGenes = input$userGeneSingle,
-                                 conditions = input$chosenFactors)
+                                 conditions = input$plotFactorsSingle)
     
     # the 2 factors to plot
-    #TODO: let the user choose which 2 factors to plot, if they chose more than 2 factors initially
     firstCondition <- input$chosenFactors[1]
     secondCondition <- input$chosenFactors[2]
     
@@ -328,13 +335,15 @@ server <- function(input, output, session){
                        "factorSingle1" = secondCondition,
                        "factorSingle2" = firstCondition)
     
+    # add a column called 'facet' for faceting.
+    # I couldn't get this working by directly calling the 'facetVar' in 'facet_wrap()'
     plotData$facet <- plotData[[facetVar]]
     
     # the full ggplot call
     ggplot(plotData, aes_string(x = xAxVar, y = "Expression",
                                 group = xAxVar)) +
       
-      # boxplot/violin based on user input
+      # boxplot/violin based on input$graphType
       switch(input$graphType,
              "boxplot" = list(geom_boxplot(aes_string(color = xAxVar), outlier.shape = NA),
                               geom_point(aes_string(alpha = 0.3, size = 5, color = xAxVar),
@@ -346,21 +355,22 @@ server <- function(input, output, session){
       facet_wrap(~facet, ncol = 2) +
       theme(legend.position = "none") +
       
-      # y scale based on user input
+      # y scale based on input$scaleType
       switch(input$scaleType, "linear" = scale_y_continuous(), "log" = scale_y_log10())
   })
   
   ## Single Gene Plot
-  # funny assignment because shiny (HTML actually) can't handle same named outputs
+  # funny double-assignment because shiny (HTML actually) can't handle same named outputs in the UI
   output$singlegene_plot1 <- output$singlegene_plot2 <- renderPlot({
     singlegene_plot()
   })
   
+  ## output an interactive DT table showing the plotted information
   output$singleGeneTable <- renderDT({
     plotData <- filterAndConvert(dataLoader = dataMatReader(),
                                  metadataLoader = metadataReader(),
                                  plotGenes = input$userGeneSingle,
-                                 conditions = input$chosenFactors)
+                                 conditions = input$plotFactorsSingle[1:2])
     
     DT::datatable(plotData)
   })
