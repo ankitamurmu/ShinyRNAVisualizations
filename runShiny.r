@@ -77,6 +77,7 @@ ui <- fluidPage(
              
              ################################# UI Tab 1: Single Gene Analysis #################################
              tabPanel("Single Gene Analysis",  # part of navbarPage
+                      #TODO: maybe we can add a section that specifies if the chosen gene is significantly different between conditions
                       
                       sidebarLayout(
                         # sidebarPanel should have all the input needed from the user
@@ -175,9 +176,9 @@ ui <- fluidPage(
                       sidebarLayout(
                         sidebarPanel(
                           # user input list of genes to plot
-                          textAreaInput("trajGenes",
-                                        "Enter a list of genes seperated by new lines, commas, or spaces:",
-                                        value = "Fndc5, Pgc1a\nBdnf, Itgb5"),
+                          selectizeInput("userGeneTraj",
+                                        "Choose the genes to plot:",
+                                        choices = NULL, multiple = TRUE),
                           
                           # add a description under the input area
                           h4("Paste genes of interest")
@@ -292,7 +293,6 @@ server <- function(input, output, session){
     })
 
   ## make an updating choice selection for factors to plot;
-  #TODO: default to first 2 factors chosen
   observeEvent(
     input$chosenFactors, {
       updateSelectizeInput(session = session, "plotFactorsSingle",
@@ -345,6 +345,7 @@ server <- function(input, output, session){
       
       # boxplot/violin based on input$graphType
       switch(input$graphType,
+             # 'list(geom_*, geom_*)' is a working alternative to adding '+' between plot layers
              "boxplot" = list(geom_boxplot(aes_string(color = xAxVar), outlier.shape = NA),
                               geom_point(aes_string(alpha = 0.3, size = 5, color = xAxVar),
                                          position = position_jitterdodge())),
