@@ -95,11 +95,11 @@ ui <- fluidPage(
                                          choices = NULL, multiple = TRUE),
 
                           # input Graph type: Boxplot/Violin
-                          radioButtons("graphType", "Graph Type",
+                          radioButtons("graphTypeSingle", "Graph Type",
                                        c("Boxplot" = "boxplot", "Violin" = "violin")),
                           
                           # input scale: linear/log
-                          radioButtons("scaleType", "Graph Scale",
+                          radioButtons("scaleTypeSingle", "Graph Scale",
                                        c("Linear" = "linear", "Log" = "log")
                                        
                           )
@@ -108,11 +108,11 @@ ui <- fluidPage(
                         # mainbarPanel should have the plots
                         mainPanel(
                           tabsetPanel(id = "plotTabSingle",
-                            tabPanel(paste0("Across OBTAIN FACTOR 1 FROM DATA/USER"),
+                            tabPanel(paste0("Across FACTOR 1"),
                                      value = "factorSingle1",
                                      plotOutput("singlegene_plot1")
                             ),
-                            tabPanel(paste0("Across OBTAIN FACTOR 2 FROM DATA/USER"),
+                            tabPanel(paste0("Across FACTOR 2"),
                                      value = "factorSingle2",
                                      plotOutput("singlegene_plot2")
                             )
@@ -142,12 +142,12 @@ ui <- fluidPage(
                           
                           
                           # input Graph type: Boxplot/Violin/Scatterplot/RadarCharts
-                          radioButtons("graphType", "Graph Type",
+                          radioButtons("graphTypeMulti", "Graph Type",
                                        c("Scatterplot" = "scatterplot",
                                          "Radar Chart" = "radar chart")),
                           
                           # input scale: linear/log
-                          radioButtons("scaleType", "Graph Scale",
+                          radioButtons("scaleTypeMulti", "Graph Scale",
                                        c("Linear" = "linear", "Log" = "log"))
                           
                         ), 
@@ -166,6 +166,7 @@ ui <- fluidPage(
                         )
                         
                       )
+                      
              ),
              
              
@@ -180,8 +181,11 @@ ui <- fluidPage(
                                         "Choose the genes to plot:",
                                         choices = NULL, multiple = TRUE),
                           
-                          # add a description under the input area
-                          h4("Paste genes of interest")
+                          # input factors
+                          selectInput("plotFactorsTraj",
+                                      "Select the factor to observe gene changes:",
+                                      choices = NULL)
+                          
                         ),
                         
                         # should contain graphs and DT table
@@ -195,7 +199,10 @@ ui <- fluidPage(
                           )
                           
                         )
-                      )
+                      ),
+                      
+                      # DT DataTable of plotted data
+                      DT::dataTableOutput("trajGeneTable")
                       
              )
              
@@ -301,27 +308,24 @@ server <- function(input, output, session){
                            server = TRUE, selected = input$chosenFactors[1:2],
                            options = list(maxItems = 2))
     })
-
-  # output$singlegene_plot <- renderPlot({
-  #   g <- ggplot(data(), aes(y = factor, x = gene), fill = gene) +
-  #     geom_boxplot(outlier.shape = 8, outlier.size = 4) +
-  #     theme_minimal()
-  # 
-  #   #save the plot
-  #   #ggsave(filename,device = "png", width = , height = ,)
-  #   #ggsave (filename, device = "pdf",width = , height = ,)
-  # 
-  # 
-  # 
-  # })
   
-  
-  ## prepare both plots dynamically by tab chosen (input$plotTabSingle)
-  singlegene_plot <- reactive({
+  ## calls the plot data for the plots and the table
+  plotDataSingle <- reactive({
+    
+    req(input$userGeneSingle,
+        input$plotFactorsSingle)
+    
     plotData <- filterAndConvert(dataLoader = dataMatReader(),
                                  metadataLoader = metadataReader(),
                                  plotGenes = input$userGeneSingle,
                                  conditions = input$plotFactorsSingle)
+  })
+  
+  
+  ## prepare both plots dynamically by tab chosen (input$plotTabSingle)
+  singlegene_plot <- reactive({
+    
+    plotData <- plotDataSingle()
     
     # the 2 factors to plot
     firstCondition <- input$plotFactorsSingle[1]
@@ -336,7 +340,7 @@ server <- function(input, output, session){
                        "factorSingle2" = firstCondition)
     
     # add a column called 'facet' for faceting.
-    # I couldn't get this working by directly calling the 'facetVar' in 'facet_wrap()'
+    #TODO: I couldn't get this working by directly calling the 'facetVar' in 'facet_wrap()'
     plotData$facet <- plotData[[facetVar]]
     
     # the full ggplot call
@@ -344,7 +348,7 @@ server <- function(input, output, session){
                                 group = xAxVar)) +
       
       # boxplot/violin based on input$graphType
-      switch(input$graphType,
+      switch(input$graphTypeSingle,
              # 'list(geom_*, geom_*)' is a working alternative to adding '+' between plot layers
              "boxplot" = list(geom_boxplot(aes_string(color = xAxVar), outlier.shape = NA),
                               geom_point(aes_string(alpha = 0.3, size = 5, color = xAxVar),
@@ -357,8 +361,9 @@ server <- function(input, output, session){
       theme(legend.position = "none") +
       
       # y scale based on input$scaleType
-      switch(input$scaleType, "linear" = scale_y_continuous(), "log" = scale_y_log10())
+      switch(input$scaleTypeSingle, "linear" = scale_y_continuous(), "log" = scale_y_log10())
   })
+  
   
   ## Single Gene Plot
   # funny double-assignment because shiny (HTML actually) can't handle same named outputs in the UI
@@ -366,17 +371,17 @@ server <- function(input, output, session){
     singlegene_plot()
   })
   
+  
   ## output an interactive DT table showing the plotted information
-  output$singleGeneTable <- renderDT({
-    plotData <- filterAndConvert(dataLoader = dataMatReader(),
-                                 metadataLoader = metadataReader(),
-                                 plotGenes = input$userGeneSingle,
-                                 conditions = input$plotFactorsSingle[1:2])
+  output$singleGeneTable <- DT::renderDT({
+    plotData <- plotDataSingle()
     
     DT::datatable(plotData)
   })
+
   
   ################################## Multi-Gene Analysis ##################################
+  
   
   output$multiGenePlot <- renderPlot({
     g <- ggradar(data (), values.radar = c(0, 0.5, 1),
@@ -391,6 +396,29 @@ server <- function(input, output, session){
   
   
   ################################## Trajectories ##################################
+  
+  
+  ## updates sidePanel gene selectizeInput based on input matrix gene names
+  observeEvent(
+    input$inputData, {
+      updateSelectizeInput(session = session, "userGeneTraj",
+                           "Choose the genes to plot:",
+                           #TODO change '$gene' to a general call
+                           choices = dataMatReader()$gene,
+                           server = TRUE)
+    })
+  
+  
+  ## choose the factor to observe changes over
+  observeEvent(
+    input$chosenFactors, {
+      updateSelectInput(session = session, "plotFactorsTraj",
+                        "Select the factor to observe gene changes:",
+                        choices = input$chosenFactors,
+                        selected = input$chosenFactors[1])
+    })
+  
+  
   ## render plots
   output$trajPlot <- renderPlot({
     # transform matrix to z score matrix
@@ -403,7 +431,16 @@ server <- function(input, output, session){
   })
   
   
-  ## render interactive DT table
+  ## output an interactive DT table showing the plotted information
+  output$singleGeneTable <- renderDT({
+    plotData <- filterAndConvert(dataLoader = dataMatReader(),
+                                 metadataLoader = metadataReader(),
+                                 plotGenes = input$userGeneTraj,
+                                 conditions = input$plotFactorsTraj)
+    
+    DT::datatable(plotData)
+  })
+  
 }
 
 
