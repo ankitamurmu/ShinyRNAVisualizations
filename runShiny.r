@@ -93,7 +93,7 @@ ui <- fluidPage(
                           selectizeInput("plotFactorsSingle",
                                          "Select 2 factors to plot by (based on input in 'Input Data' tab):",
                                          choices = NULL, multiple = TRUE),
-
+                          
                           # input Graph type: Boxplot/Violin
                           radioButtons("graphTypeSingle", "Graph Type",
                                        c("Boxplot" = "boxplot", "Violin" = "violin")),
@@ -108,15 +108,17 @@ ui <- fluidPage(
                         # mainbarPanel should have the plots
                         mainPanel(
                           tabsetPanel(id = "plotTabSingle",
-                            tabPanel(paste0("Across FACTOR 1"),
-                                     value = "factorSingle1",
-                                     plotOutput("singlegene_plot1")
-                            ),
-                            tabPanel(paste0("Across FACTOR 2"),
-                                     value = "factorSingle2",
-                                     plotOutput("singlegene_plot2")
-                            )
-                            
+                                      tabPanel(paste0("Across FACTOR 1"),
+                                               value = "factorSingle1",
+                                               plotOutput("singlegene_plot1",
+                                                          height = 1000)  #TODO: make this dynamically change to relevant height somehow..
+                                      ),
+                                      tabPanel(paste0("Across FACTOR 2"),
+                                               value = "factorSingle2",
+                                               plotOutput("singlegene_plot2",
+                                                          height = 800)  #TODO: make this dynamically change to relevant height somehow..
+                                      )
+                                      
                           )
                           
                         )
@@ -178,8 +180,8 @@ ui <- fluidPage(
                         sidebarPanel(
                           # user input list of genes to plot
                           selectizeInput("userGeneTraj",
-                                        "Choose the genes to plot:",
-                                        choices = NULL, multiple = TRUE),
+                                         "Choose the genes to plot:",
+                                         choices = NULL, multiple = TRUE),
                           
                           # input factors
                           selectInput("plotFactorsTraj",
@@ -289,6 +291,7 @@ server <- function(input, output, session){
   
   ################################## Single-Gene Analysis ##################################
   
+  
   ## updates sidePanel gene selectizeInput based on input matrix gene names
   observeEvent(
     input$inputData, {
@@ -297,7 +300,7 @@ server <- function(input, output, session){
                            choices = dataMatReader()$gene,
                            server = TRUE)
     })
-
+  
   ## make an updating choice selection for factors to plot;
   observeEvent(
     input$chosenFactors, {
@@ -367,8 +370,19 @@ server <- function(input, output, session){
   ## Single Gene Plot
   # funny double-assignment because shiny (HTML actually) can't handle same named outputs in the UI
   output$singlegene_plot1 <- output$singlegene_plot2 <- renderPlot({
+    
+    # gg_facet_nrow <- function(p){
+    #   num_panels <- length(unique(ggplot_build(p)$data[[1]]$PANEL)) # get number of panels
+    #   num_rows <- wrap_dims(num_panels)[1] # get number of rows
+    # }
+    
+    
+    num_panels <- length(unique(ggplot_build(singlegene_plot())$data[[1]]$PANEL)) # get number of panels
+    num_rows <- wrap_dims(num_panels)[1] # get number of rows
+    
+    
     singlegene_plot()
-  })
+  }, height = function(){num_rows*300})
   
   
   ## output an interactive DT table showing the plotted information
@@ -377,7 +391,7 @@ server <- function(input, output, session){
     
     DT::datatable(plotData)
   })
-
+  
   
   ################################## Multi-Gene Analysis ##################################
   
