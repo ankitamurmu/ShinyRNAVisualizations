@@ -267,12 +267,12 @@ server <- function(input, output, session){
     })
   
   
-  # look at input data
+  # for testing: look at input data
   output$dataMatPeek <- renderTable({
     head(dataMatReader())
   })
   
-  # look at input metadata
+  # for testing: look at input metadata
   output$metadataMatPeek <- renderTable({
     head(metadataReader())
   })
@@ -281,8 +281,7 @@ server <- function(input, output, session){
   output$filteredConverted <- renderDT({
     plotData <- filterAndConvert(dataLoader = dataMatReader(),
                                  metadataLoader = metadataReader(),
-                                 plotGenes = c("Fndc5","Bdnf"),
-                                 # change conditions to the input of factors from first page
+                                 plotGenes = c("Fndc5","Bdnf"),  # arbitrary gene choice. maybe change to random or let user choose?
                                  conditions = input$chosenFactors)
     
     DT::datatable(plotData)
@@ -305,7 +304,7 @@ server <- function(input, output, session){
       updateSelectizeInput(session = session, "plotFactorsSingle",
                            "Select 2 factors to plot by (based on input in 'Input Data' tab):",
                            choices = input$chosenFactors,
-                           server = TRUE, selected = input$chosenFactors[1:2],
+                           selected = input$chosenFactors[1:2],
                            options = list(maxItems = 2))
     })
   
@@ -420,19 +419,19 @@ server <- function(input, output, session){
   
   
   ## render plots
-  output$trajPlot <- renderPlot({
-    # transform matrix to z score matrix
-    
-    ggplot()
-    # # load the data matrix
-    # plotData <- dataMatReader()
-    # ggplot(plotData, aes(x = input$trajGenes, y = )) +
-    #   geom_line()
-  })
+  # output$trajPlot <- renderPlot({
+  #   # transform matrix to z score matrix
+  #   
+  #   ggplot()
+  #   # # load the data matrix
+  #   # plotData <- dataMatReader()
+  #   # ggplot(plotData, aes(x = input$trajGenes, y = )) +
+  #   #   geom_line()
+  # })
   
   
   ## output an interactive DT table showing the plotted information
-  output$singleGeneTable <- renderDT({
+  output$trajGeneTable <- renderDT({
     plotData <- filterAndConvert(dataLoader = dataMatReader(),
                                  metadataLoader = metadataReader(),
                                  plotGenes = input$userGeneTraj,
