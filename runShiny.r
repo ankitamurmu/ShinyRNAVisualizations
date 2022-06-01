@@ -205,7 +205,12 @@ ui <- fluidPage(
                           # input factors
                           selectInput("plotFactorsTraj",
                                       "Select the factor to observe gene changes:",
-                                      choices = NULL)
+                                      choices = NULL),
+                          
+                          # input theme
+                          radioButtons("themeTypeSingle", "Graph Theme",
+                                       c("Gray" = "gray", "Classic" = "classic",
+                                         "Minimal" = "min", "Dark" = "dark"))
                           
                         ),
                         
@@ -214,6 +219,10 @@ ui <- fluidPage(
                           tabsetPanel(
                             tabPanel("Trajectories Plot",
                                      plotOutput("trajPlot")
+                            ),
+                            
+                            tabPanel("Combined Trajectories",
+                                     plotOutput("trajPlotCombined")
                             ),
                             
                             tabPanel("Data Table",
@@ -337,10 +346,10 @@ server <- function(input, output, session){
     req(input$userGeneSingle,
         input$plotFactorsSingle)
     
-    plotData <- filterAndConvert(dataLoader = dataMatReader(),
-                                 metadataLoader = metadataReader(),
-                                 plotGenes = input$userGeneSingle,
-                                 conditions = input$plotFactorsSingle)
+    filterAndConvert(dataLoader = dataMatReader(),
+                     metadataLoader = metadataReader(),
+                     plotGenes = input$userGeneSingle,
+                     conditions = input$plotFactorsSingle)
   })
   
   
@@ -458,24 +467,66 @@ server <- function(input, output, session){
     })
   
   
+  ## convert data to Z-score
+  zScorer <- reactive({
+    # load original matrix
+    rawData <- dataMatReader()
+    
+    # calculate Z-score
+    #TODO: how do I know col 1 is the genes? maybe allow the user to override this if necessary
+    zData <- rawData[,2:ncol(rawData)] %>%
+      sapply(function(df) (df-mean(df))/sd(df))
+    
+    # now return the 'gene' column
+    zData <- cbind(rawData[,1], zData)
+    
+  })
+  
+  
+  ## prepare data for table & plot
+  plotDataTraj <- reactive({
+    
+    req(input$userGeneTraj,
+        input$plotFactorsTraj)
+    
+    normalData <- filterAndConvert(dataLoader = dataMatReader(),
+                                   metadataLoader = metadataReader(),
+                                   plotGenes = input$userGeneTraj,
+                                   conditions = input$plotFactorsTraj)
+    
+    zScoreData <- filterAndConvert(dataLoader = zScorer(),
+                                   metadataLoader = metadataReader(),
+                                   plotGenes = input$userGeneTraj,
+                                   conditions = input$plotFactorsTraj)
+    zScoreData <- zScoreData %>% dplyr::rename(ZScore = Expression)
+    
+    # add ZScore data as a new column to normalData
+    normalData[["ZScore"]] <- zScoreData$ZScore
+    normalData
+  })
+  
+  
+  ## create plots
+  trajectory_plot <- reactive({
+    
+    # loads data with additional column of 'ZScore'
+    plotDataZscore <- plotDataTraj()
+    
+    ggplot()
+  })
+  
+  
   ## render plots
-  # output$trajPlot <- renderPlot({
-  #   # transform matrix to z score matrix
-  #   
-  #   ggplot()
-  #   # # load the data matrix
-  #   # plotData <- dataMatReader()
-  #   # ggplot(plotData, aes(x = input$trajGenes, y = )) +
-  #   #   geom_line()
-  # })
+  output$trajPlot <- output$trajPlotCombined <- renderPlot({
+    trajectory_plot()
+    # transform matrix to z score matrix
+    
+  })
   
   
   ## output an interactive DT table showing the plotted information
   output$trajGeneTable <- renderDT({
-    plotData <- filterAndConvert(dataLoader = dataMatReader(),
-                                 metadataLoader = metadataReader(),
-                                 plotGenes = input$userGeneTraj,
-                                 conditions = input$plotFactorsTraj)
+    plotData <- plotDataTraj()
     
     DT::datatable(plotData)
   })
