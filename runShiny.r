@@ -47,6 +47,15 @@ gg_facet_nrow <- function(p){
 }
 
 
+## used to change themes for plots
+themeChanger <- function(inputTheme){
+  switch(inputTheme,
+         "min" = theme_minimal(),
+         "gray" = NULL,
+         "dark" = theme_dark(),
+         "classic" = theme_classic())
+}
+
 
 ui <- fluidPage(
   titlePanel("Shiny RNA Visualizations"),
@@ -108,7 +117,12 @@ ui <- fluidPage(
                           
                           # input scale: linear/log
                           radioButtons("scaleTypeSingle", "Graph Scale",
-                                       c("Linear" = "linear", "Log" = "log"))
+                                       c("Linear" = "linear", "Log" = "log")),
+                          
+                          # input theme
+                          radioButtons("themeTypeSingle", "Graph Theme",
+                                       c("Gray" = "gray", "Classic" = "classic",
+                                         "Minimal" = "min", "Dark" = "dark"))
                           
                         ),
                         
@@ -202,10 +216,11 @@ ui <- fluidPage(
                                      plotOutput("trajPlot")
                             ),
                             
-                            tabPanel("Query Info")
-                          ),
-                          # DT DataTable of plotted data
-                          DT::dataTableOutput("trajGeneTable") 
+                            tabPanel("Data Table",
+                                     # DT DataTable of plotted data
+                                     DT::dataTableOutput("trajGeneTable"))
+                          )
+                          
                         )
                       )
                       
@@ -357,7 +372,7 @@ server <- function(input, output, session){
     ggplot(plotData, aes_string(x = xAxVar, y = "Expression",
                                 group = xAxVar)) +
       
-      # boxplot/violin based on input$graphType
+      # boxplot/violin based on input$graphType*
       switch(input$graphTypeSingle,
              # 'list(geom_*, geom_*)' is a working alternative to adding '+' between plot layers
              "boxplot" = list(geom_boxplot(aes_string(color = xAxVar),
@@ -368,10 +383,14 @@ server <- function(input, output, session){
       
       ylab("Expression") +
       xlab(xAxVar) +
+      
+      # plot theme based on input$themeType*
+      themeChanger(input$themeTypeSingle) +
+      
       facet_wrap(~facet, ncol = 2) +
       theme(legend.position = "none") +
       
-      # y scale based on input$scaleType
+      # y scale based on input$scaleType*
       switch(input$scaleTypeSingle, "linear" = scale_y_continuous(), "log" = scale_y_log10())
   })
   
@@ -381,7 +400,7 @@ server <- function(input, output, session){
   heightSingle <- reactive({
     req(input$plotTabSingle)
     gg_facet_nrow(singlegene_plot())
-    })
+  })
   
   
   ## Single Gene Plot
