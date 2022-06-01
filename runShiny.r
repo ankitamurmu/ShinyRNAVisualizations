@@ -40,6 +40,14 @@ filterAndConvert <- function(dataLoader, metadataLoader, plotGenes, conditions){
 }
 
 
+## extract the number of facet rows in a ggplot, for setting the height of mainPanel with plots
+gg_facet_nrow <- function(p){
+  num_panels <- length(unique(ggplot_build(p)$data[[1]]$PANEL)) # get number of panels
+  num_rows <- wrap_dims(num_panels)[1] # get number of rows
+}
+
+
+
 ui <- fluidPage(
   titlePanel("Shiny RNA Visualizations"),
   # name of the whole project - stays at top next to page tabs
@@ -100,31 +108,28 @@ ui <- fluidPage(
                           
                           # input scale: linear/log
                           radioButtons("scaleTypeSingle", "Graph Scale",
-                                       c("Linear" = "linear", "Log" = "log")
-                                       
-                          )
+                                       c("Linear" = "linear", "Log" = "log"))
+                          
                         ),
                         
                         # mainbarPanel should have the plots
                         mainPanel(
                           tabsetPanel(id = "plotTabSingle",
-                                      tabPanel(paste0("Across FACTOR 1"),
+                                      tabPanel("Across FACTOR 1",
                                                value = "factorSingle1",
-                                               plotOutput("singlegene_plot1",
-                                                          height = 1000)  #TODO: make this dynamically change to relevant height somehow..
+                                               plotOutput("singlegene_plot1")
                                       ),
-                                      tabPanel(paste0("Across FACTOR 2"),
+                                      tabPanel("Across FACTOR 2",
                                                value = "factorSingle2",
-                                               plotOutput("singlegene_plot2",
-                                                          height = 800)  #TODO: make this dynamically change to relevant height somehow..
-                                      )
+                                               plotOutput("singlegene_plot2")
+                                      ),
+                                      # DT DataTable of plotted data
+                                      tabPanel("Data Table",
+                                               DT::dataTableOutput("singleGeneTable"))
                                       
                           )
-                          
                         )
-                      ),
-                      # DT DataTable of plotted data
-                      DT::dataTableOutput("singleGeneTable")
+                      )
              ),
              
              
@@ -198,13 +203,13 @@ ui <- fluidPage(
                             ),
                             
                             tabPanel("Query Info")
-                          )
-                          
+                          ),
+                          # DT DataTable of plotted data
+                          DT::dataTableOutput("trajGeneTable") 
                         )
-                      ),
+                      )
                       
-                      # DT DataTable of plotted data
-                      DT::dataTableOutput("trajGeneTable")
+                      
                       
              )
              
@@ -327,6 +332,9 @@ server <- function(input, output, session){
   ## prepare both plots dynamically by tab chosen (input$plotTabSingle)
   singlegene_plot <- reactive({
     
+    req(input$userGeneSingle,
+        input$plotFactorsSingle)
+    
     plotData <- plotDataSingle()
     
     # the 2 factors to plot
@@ -352,7 +360,8 @@ server <- function(input, output, session){
       # boxplot/violin based on input$graphType
       switch(input$graphTypeSingle,
              # 'list(geom_*, geom_*)' is a working alternative to adding '+' between plot layers
-             "boxplot" = list(geom_boxplot(aes_string(color = xAxVar), outlier.shape = NA),
+             "boxplot" = list(geom_boxplot(aes_string(color = xAxVar),
+                                           outlier.shape = NA),
                               geom_point(aes_string(alpha = 0.3, size = 5, color = xAxVar),
                                          position = position_jitterdodge())),
              "violin" = geom_violin(aes_string(fill = xAxVar), trim = FALSE)) +
@@ -367,22 +376,20 @@ server <- function(input, output, session){
   })
   
   
+  ## gives us the number of rows in a facet_wrapped ggplot,
+  # for determining the height of mainPanel with plots
+  heightSingle <- reactive({
+    req(input$plotTabSingle)
+    gg_facet_nrow(singlegene_plot())
+    })
+  
+  
   ## Single Gene Plot
   # funny double-assignment because shiny (HTML actually) can't handle same named outputs in the UI
   output$singlegene_plot1 <- output$singlegene_plot2 <- renderPlot({
-    
-    # gg_facet_nrow <- function(p){
-    #   num_panels <- length(unique(ggplot_build(p)$data[[1]]$PANEL)) # get number of panels
-    #   num_rows <- wrap_dims(num_panels)[1] # get number of rows
-    # }
-    
-    
-    num_panels <- length(unique(ggplot_build(singlegene_plot())$data[[1]]$PANEL)) # get number of panels
-    num_rows <- wrap_dims(num_panels)[1] # get number of rows
-    
-    
     singlegene_plot()
-  }, height = function(){num_rows*300})
+    # height is input here:
+  }, height = function(){heightSingle()*350})
   
   
   ## output an interactive DT table showing the plotted information
