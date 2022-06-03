@@ -430,16 +430,25 @@ server <- function(input, output, session){
   
   ################################## Multi-Gene Analysis ##################################
   
-  
-  output$multiGenePlot <- renderPlot({
-    g <- ggradar(data (), values.radar = c(0, 0.5, 1),
-                 axis.labels = paste0("rownames"),legend.title = "rownames",
-                 legend.position = "bottom", background.circle.colour = "white",
-                 axis.label.size = 8, group.point.size = 3)
+ ## updates sidePanel gene selectizeInput based on input matrix gene names
+  observeEvent(
+    input$inputData, {
+      updateSelectizeInput(session = session, "userGeneMulti", "Choose gene(s) to plot:",
+                           #TODO change '$gene' to a general call
+                           choices = dataMatReader()$gene,
+                           server = TRUE, selected = input$userGeneMulti[])
+    })
+  ## make an updating choice selection for factors to plot;
+  observeEvent(
+    input$chosenFactors, {
+      updateSelectizeInput(session = session, "plotFactorsMulti",
+                           "Select factors to plot by (based on input in 'Input Data' tab):",
+                           choices = input$chosenFactors,
+                           server = TRUE, selected = input$chosenFactors[])
+      
+    }) 
     
     
-    
-  })
   
   
   
