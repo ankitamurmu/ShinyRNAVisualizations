@@ -57,6 +57,17 @@ themeChanger <- function(inputTheme){
 }
 
 
+## groups data to calculate averages for trajectory plots
+groupTrajData <- function(data, geneVarName, xAxisVarName, facetVarName){
+  data %>%
+    dplyr::group_by(.data[[geneVarName]],
+                    .data[[xAxisVarName]],
+                    .data[[facetVarName]]) %>%
+    summarize(ZScore = mean(ZScore),
+              Expression = mean(Expression))
+}
+
+
 ui <- fluidPage(
   titlePanel("Shiny RNA Visualizations"),
   # name of the whole project - stays at top next to page tabs
@@ -207,8 +218,22 @@ ui <- fluidPage(
                                       "Select the factor to observe gene changes:",
                                       choices = NULL),
                           
+                          # input factors
+                          selectInput("facetVarTraj",
+                                      "Select an optional factor to observe changes across this factor:",
+                                      choices = NULL),
+                          
+                          # input factors
+                          radioButtons("yAxisTraj",
+                                       "Choose what to plot on Y-axis:",
+                                       c("Z-Score" = "ZScore",
+                                         "Expression" = "Expression")),
+                          
+                          # line width input
+                          sliderInput("lineWidth", "Line Width", 0, 5, 1.1, step = 0.1),
+                          
                           # input theme
-                          radioButtons("themeTypeSingle", "Graph Theme",
+                          radioButtons("themeTypeTraj", "Graph Theme",
                                        c("Gray" = "gray", "Classic" = "classic",
                                          "Minimal" = "min", "Dark" = "dark"))
                           
@@ -216,18 +241,16 @@ ui <- fluidPage(
                         
                         # should contain graphs and DT table
                         mainPanel(
-                          tabsetPanel(
-                            tabPanel("Trajectories Plot",
-                                     plotOutput("trajPlot")
-                            ),
-                            
-                            tabPanel("Combined Trajectories",
-                                     plotOutput("trajPlotCombined")
-                            ),
-                            
-                            tabPanel("Data Table",
-                                     # DT DataTable of plotted data
-                                     DT::dataTableOutput("trajGeneTable"))
+                          tabsetPanel(id = "plotTabTraj",
+                                      tabPanel("Trajectories Plot",
+                                               value = "trajCond",
+                                               plotOutput("trajPlot")
+                                      ),
+                                      
+                                      tabPanel("Data Table",
+                                               # DT DataTable of plotted data
+                                               DT::dataTableOutput("trajGeneTable")
+                                      )
                           )
                           
                         )
@@ -466,6 +489,15 @@ server <- function(input, output, session){
                         selected = input$chosenFactors[1])
     })
   
+  #TODO: this should remove the option chosen in input$plotFactorsTraj
+  observeEvent(
+    input$chosenFactors, {
+      updateSelectInput(session = session, "facetVarTraj",
+                        "Select an optional factor to observe changes across this factor:",
+                        choices = input$chosenFactors,
+                        selected = input$chosenFactors[2])
+    })
+  
   
   ## convert data to Z-score
   zScorer <- reactive({
@@ -492,27 +524,82 @@ server <- function(input, output, session){
     normalData <- filterAndConvert(dataLoader = dataMatReader(),
                                    metadataLoader = metadataReader(),
                                    plotGenes = input$userGeneTraj,
-                                   conditions = input$plotFactorsTraj)
+                                   conditions = c(input$plotFactorsTraj, input$facetVarTraj))
     
     zScoreData <- filterAndConvert(dataLoader = zScorer(),
                                    metadataLoader = metadataReader(),
                                    plotGenes = input$userGeneTraj,
-                                   conditions = input$plotFactorsTraj)
+                                   conditions = c(input$plotFactorsTraj, input$facetVarTraj))
     zScoreData <- zScoreData %>% dplyr::rename(ZScore = Expression)
     
     # add ZScore data as a new column to normalData
     normalData[["ZScore"]] <- zScoreData$ZScore
+    
     normalData
+  })
+  
+  
+  prepareTrajData <- reactive({
+    # loads data with additional column of 'ZScore'
+    plotData <- plotDataTraj()
+    
+    # determine X var
+    xVar <- input$plotFactorsTraj
+    # use another factor for faceting?
+    facetVar <- input$facetVarTraj
+    # explicitly write gene name..
+    geneName <- "gene"  #TODO: this is specific and should be general
+    
+    plotData$xAxVar <- factor(plotData[[xVar]])
+    plotData$facet <- factor(plotData[[facetVar]])
+    plotData$gene <- plotData[[geneName]]
+    
+    plotData <- groupTrajData(data = plotData,
+                              geneVarName = "gene",
+                              xAxisVarName = "xAxVar",
+                              facetVarName = "facet") %>%
+      # EXPLAIN
+      dplyr::rename({{facetVar}} := facet,
+                    {{xVar}} := xAxVar)
   })
   
   
   ## create plots
   trajectory_plot <- reactive({
     
-    # loads data with additional column of 'ZScore'
-    plotDataZscore <- plotDataTraj()
+    plotData <- prepareTrajData()
     
-    ggplot()
+    # ggplot call
+    ggplot(plotData, aes_string(x = input$plotFactorsTraj,
+                                y = input$yAxisTraj,
+                                color = "gene")) +
+      
+      #TODO: change gene to general call
+      geom_line(aes(group = gene),
+                lwd = input$lineWidth) +
+      
+      # based on input for Y-axis
+      ylab(switch(input$yAxisTraj,
+                  "ZScore" = "Z-Score",
+                  "Expression" = "Expression")) +
+      
+      xlab(input$plotFactorsTraj) +
+      
+      themeChanger(input$themeTypeTraj) +
+      
+      #TODO: add this text changer in UI
+      # theme(text = element_text(size = input$textSizeTraj)) +
+      
+      # facet_wrap to conditions or combine into one plot
+      facet_wrap(input$facetVarTraj, ncol = 2)
+    
+  })
+  
+  
+  # determine height by number of facet rows
+  heightTraj <- reactive({
+    req(input$plotTabTraj)
+    gg_facet_nrow(trajectory_plot())
   })
   
   
@@ -521,12 +608,12 @@ server <- function(input, output, session){
     trajectory_plot()
     # transform matrix to z score matrix
     
-  })
+  }, height = function(){heightTraj()*350})
   
   
   ## output an interactive DT table showing the plotted information
   output$trajGeneTable <- renderDT({
-    plotData <- plotDataTraj()
+    plotData <- prepareTrajData()
     
     DT::datatable(plotData)
   })
