@@ -448,6 +448,55 @@ server <- function(input, output, session){
       
     }) 
     
+  ## calls the plot data for the plots and the table
+  plotDataMulti <- reactive({
+    
+    req(input$userGeneMulti,
+        input$plotFactorsMulti)
+    
+    plotData <- filterAndConvert(dataLoader = dataMatReader(),
+                                 metadataLoader = metadataReader(),
+                                 conditions = input$userGeneMulti,
+                                 conditions = input$plotFactorsMulti)
+  })
+  
+  
+  multigene_plot <- reactive({
+    
+    req(input$userGeneMulti,
+        input$plotFactorsMulti)
+    
+    #simulate data
+    set.seed(5000)
+    N = 10000
+    
+    #radar graph using ggradar
+    
+    g <-ggradar(multigene_plot, values.radar = c(0, 0.5, 1),
+                axis.labels = paste0("userGeneMulti"),legend.title = "Factors",
+                legend.position = "bottom", background.circle.colour = "white",
+                axis.label.size = 8, group.point.size = 3)
+    #"scatterplot" = pairs(data = plotData) 
+    
+    # y scale based on input$scaleType
+    #switch(input$scaleTypeSingle, "linear" = scale_y_continuous(), "log" = scale_y_log10())
+  })
+  
+  
+## Multi Gene Plot
+
+output$multigene_plot <- renderPlot({
+  multigene_plot()
+})
+
+
+## output an interactive DT table showing the plotted information
+output$multiGeneTable <- DT::renderDT({
+  plotData <- plotDataMulti()
+  
+  DT::datatable(plotData)
+})
+
     
   
   
