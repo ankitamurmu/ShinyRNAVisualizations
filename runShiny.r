@@ -488,9 +488,7 @@ server <- function(input, output, session){
     req(input$userGeneMulti,
         input$plotFactorsMulti)
     
-    #simulate data
-    set.seed(5000)
-    N = 10000
+   
     
     #radar graph using ggradar
     
