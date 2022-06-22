@@ -9,7 +9,10 @@ library(DT)
 library(ggradar)
 library(readr)
 library(stringr)
+library(vroom)
 
+
+############################################## FUNCTIONS ##############################################
 
 ## function to convert data to ggplot style ('longer')
 filterAndConvert <- function(dataLoader, metadataLoader, plotGenes, conditions){
@@ -66,6 +69,7 @@ groupTrajData <- function(data, geneVarName, xAxisVarName, facetVarName){
     summarize(ZScore = mean(ZScore),
               Expression = mean(Expression))
 }
+
 
 
 ui <- fluidPage(
@@ -273,7 +277,9 @@ server <- function(input, output, session){
   # change the default limit of 5MB user uploads to 200MB (sample data is 129MB)
   options(shiny.maxRequestSize=200*1024^2)
   
+  
   ################################## Input Tab ##################################
+  
   
   ##### data matrix reader #####
   dataMatReader <- reactive({
@@ -284,8 +290,7 @@ server <- function(input, output, session){
     req(dataFile)
     
     # read the uniquely produced datapath, read the file
-    #TODO consider looking at the extension to change ',' if needed
-    readr::read_delim(dataFile$datapath, ",", col_names = TRUE, show_col_types = FALSE)
+    vroom::vroom(dataFile$datapath)
   })
   
   ##### metadata #####
@@ -293,12 +298,11 @@ server <- function(input, output, session){
     # await user input in the relevant fileInput
     metadataFile <- input$inputMetadata
     
-    # suppresses error, basically waits for input before it continues render function
+    # waits for input
     req(metadataFile)
     
-    # read the uniquely produced datapath, read the file
-    metadata <- readr::read_delim(metadataFile$datapath, ",", col_names = TRUE,
-                                  show_col_types = FALSE)
+    # read the file from the temp file path
+    metadata <- vroom::vroom(dataFile$datapath)
     
     # remove problematic characters from colnames
     #TODO: remove all possible interferences, and more elegantly than these multiple calls
