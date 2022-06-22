@@ -166,40 +166,39 @@ ui <- fluidPage(
                         sidebarPanel(
                           tabPanel("Gene Expression"),
                           
-                          # drop-down list to type in gene of interest to plot
-                          # gene input, change 'choices' to a vector of all rownames of the data matrix
-                          selectInput("userGeneMulti", "Choose gene(s) to plot:", choices = c(1,2,3)),
+                          # user input list of genes to plot
+                          selectizeInput("userGeneMulti", "Choose genes to plot:",
+                                         choices = NULL, multiple = TRUE),
                           
                           # input factors
+                          selectizeInput("plotFactorsMulti",
+                                         "Select factors to plot by (based on input in 'Input Data' tab):",
+                                         choices = NULL, multiple = TRUE),
                           
-                          
-                          # input Graph type: Boxplot/Violin/Scatterplot/RadarCharts
+                          # input Graph type: Boxplot/Violin
                           radioButtons("graphTypeMulti", "Graph Type",
-                                       c("Scatterplot" = "scatterplot",
-                                         "Radar Chart" = "radar chart")),
+                                       c("Radar Chart" = "radar chart")),
                           
-                          # input scale: linear/log
-                          radioButtons("scaleTypeMulti", "Graph Scale",
-                                       c("Linear" = "linear", "Log" = "log"))
-                          
-                        ), 
+                                                  
+                        ),
                         
                         # mainbarPanel should have the plots
                         mainPanel(
                           tabsetPanel(
-                            tabPanel(paste0("Across OBTAIN FACTOR 1 FROM DATA/USER"),
-                                     plotOutput("multigene_plot")
-                            ),
-                            tabPanel(paste0("Across OBTAIN FACTOR 2 FROM DATA/USER")
-                                     # the ggplot across factor 2 should be here
-                            ),
-                            
+                                      tabPanel(paste0("Across FACTORS AND GENES"),  
+                                               
+                                               plotOutput("multigene_plot")
+                                      ),
+                        tabPanel("Data Table",
+                      # DT DataTable of plotted data
+                      DT::dataTableOutput("MultiGeneTable")
+             )
                           )
                         )
-                        
                       )
-                      
              ),
+             
+             
              
              
              
@@ -489,9 +488,7 @@ server <- function(input, output, session){
     req(input$userGeneMulti,
         input$plotFactorsMulti)
     
-    #simulate data
-    set.seed(5000)
-    N = 10000
+   
     
     #radar graph using ggradar
     
